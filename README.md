@@ -47,7 +47,11 @@ In this task, you should ensure that your implementation of `FSFTBuffer` can han
 
 For this task, you should implement a mediator service for Wikipedia. This service will access Wikipedia (using the `JWiki` API) to obtain pages and other relevant information. 
 
-* The mediator service should **cache** Wikipedia pages to minimize network accesses.
+* The mediator service should **cache** Wikipedia pages to minimize network accesses. 
+The cache capacity (number of pages to be cached) will be provided as a constructor parameter argument for this class:
+```java
+public WikiMediator(int capacity)
+```
 * The mediator service should also collect statistical information about requests.
 
 A `WikiMediator` instance should support the following basic operations:
@@ -55,14 +59,14 @@ A `WikiMediator` instance should support the following basic operations:
 1. `List<String> search(String query, int limit)`: Given a `query`, return up to `limit` page titles that match the query string (per Wikipedia's search service).
 2. `String getPage(String pageTitle)`: Given a `pageTitle`, return the text associated with the Wikipedia page that matches `pageTitle`.
 3. `List<String> zeitgeist(int limit)`: Return the most common `String`s used in `search` and `getPage` requests, with items being sorted in non-increasing count order. When many requests have been made, return only `limit` items.
-4. `List<String> trending(int limit)`: Similar to `zeitgeist()`, but returns the most frequent requests made in the last 30 seconds.
+4. `List<String> trending(int timeLimitInSeconds, int maxItems)`: Similar to `zeitgeist()`, but returns the most frequent requests made in the last `timeLimitInSeconds` seconds. This method should report at most `maxItems` of the most frequent requests. 
 5. `int peakLoad30s()`: What is the maximum number of requests seen in any 30-second window? The request count is to include all requests made using the public API of `WikiMediator`, and therefore counts all **five** methods listed as **basic page requests**.
 
 ## Task 4: `WikiMediatorServer`
 
 ### **Network Service**
 
-Implement a server application that wraps a `WikiMediator` instance. The server should receive requests over a network Implement a server-based application that receives requests over a network socket and returns results appropriately. The server should be capable of handling more than one request simultaneously.
+Implement a server application that wraps a `WikiMediator` instance. The server should receive requests over a network. Implement a server-based application that receives requests over a network socket and returns results appropriately. The server should be capable of handling more than one request simultaneously.
 
 (To get started, you will find this example helpful: https://github.com/CPEN-221/FibonacciServer.)
 
@@ -87,7 +91,8 @@ As examples, here are strings for `search` and `zeitgeist`:
 
 The `id` field is an identifier used by the client to disambiguate multiple responses and should be included as-is in the response.
 
-The response should also be a JSON-formatted string with a `status` field that should have the value `"success"` if the operation was successfully executed, and a `response` field that contains the results. If the operation was not successful then the `status` field should have the value `"failed"` and the `response` field can include a suitable error message explaining the failure.
+The response should also be a JSON-formatted string with a `status` field that should have the value `"success"` if the operation was successfully executed, and a `response` field that contains the results. 
+If the operation was not successful then the `status` field should have the value `"failed"` and the `response` field can include a suitable error message explaining the failure.
 
 For example, the response to the simple search with "Barack Obama" should yield:
 
@@ -99,7 +104,8 @@ For example, the response to the simple search with "Barack Obama" should yield:
 }
 ```
 
-The JSON-formatted request may include an optional `timeout` field that indicates how long (in seconds) the service should wait for a response from Wikipedia before declaring the operation as having failed. For example, the following request
+The JSON-formatted request may include an optional `timeout` field that indicates how long (in seconds) the service should wait for a response from Wikipedia before declaring the operation as having failed. 
+For example, the following request
 
 ```jsx
 {
@@ -122,7 +128,8 @@ may fail because no Wikipedia response was received in 1 second resulting in a `
 
 ### Survivability Across Sessions
 
-You should implement a system where the statistical information associated with the `WikiMediator` instance can be stored in the local filesystem, and that such data can be reloaded each time your service is started. You **should** use the directory `local` for all the files that you create.
+You should implement a system where the statistical information associated with the `WikiMediator` instance can be stored in the local filesystem, and that such data can be reloaded each time your service is started. 
+You **should** use the directory `local` for all the files that you create.
 
 To shutdown a server, one would send a request like this:
 
@@ -144,9 +151,17 @@ The server should respond with the message:
 
 And then the server should stop accepting requests over the network and terminate after writing state to disk. This state should be read when a new instance of `WikiMediatorServer` is created and the data is available in the directory named `local`.
 
-## Task 5: [TODO]
+## Task 5: Shortest Path Between Two Pages
 
-[TODO]
+The last part of this mini-project is to add support to `WikiMediator` to find the shortest path between two Wikipedia pages.  
+Basically, we are interested to know the minimum number of link clicks it takes to start from a page and reach another page.
+To do so, a method with the following signature should be included in `WikiMediator`:
+```java
+List<String> ShortestPath(String pageTitle1, String pageTitle2)
+```
+* If a path exists, a list of page titles (including the starting and ending pages) on the shortest path should be returned.
+* If there are two or more shortest paths with equal length, the one with the lowest lexicographical value is to be returned.
+* If no path exists between two pages, an empty List should be returned. 
 
 ## Assessment Hints
 
