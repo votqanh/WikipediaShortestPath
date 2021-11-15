@@ -1,4 +1,4 @@
-**CPEN 221 / Fall 2020 / MP3**
+**CPEN 221 / Fall 2021 / MP3**
 
 # Buffers, Concurrency and Wikipedia
 
@@ -48,9 +48,9 @@ In this task, you should ensure that your implementation of `FSFTBuffer` can han
 For this task, you should implement a mediator service for Wikipedia. This service will access Wikipedia (using the `JWiki` API) to obtain pages and other relevant information. 
 
 * The mediator service should **cache** Wikipedia pages to minimize network accesses. 
-The cache capacity (number of pages to be cached) will be provided as a constructor parameter argument for this class:
+The cache capacity (number of pages to be cached) as well as the staleness interval (the number of **seconds** after which a page in the cache will become stale) will be provided as arguments to the constructor for this class:
 ```java
-public WikiMediator(int capacity)
+public WikiMediator(int capacity, int stalenessInterval)
 ```
 * The mediator service should also collect statistical information about requests.
 
@@ -74,7 +74,7 @@ The requests take the form of a JSON-formatted string with appropriate parameter
 
 As examples, here are strings for `search` and `zeitgeist`:
 
-```jsx
+```json
 {
 	"id": "1",
 	"type": "search",
@@ -96,7 +96,7 @@ If the operation was not successful then the `status` field should have the valu
 
 For example, the response to the simple search with "Barack Obama" should yield:
 
-```jsx
+```json
 {
 	"id": "1",
 	"status": "success",
@@ -107,7 +107,7 @@ For example, the response to the simple search with "Barack Obama" should yield:
 The JSON-formatted request may include an optional `timeout` field that indicates how long (in seconds) the service should wait for a response from Wikipedia before declaring the operation as having failed. 
 For example, the following request
 
-```jsx
+```json
 {
 	"id": "3",
 	"type": "search",
@@ -118,7 +118,7 @@ For example, the following request
 
 may fail because no Wikipedia response was received in 1 second resulting in a `WikiMediator` response such as this:
 
-```jsx
+```json
 {
 	"id": "3",
 	"status": "failed",
@@ -144,8 +144,8 @@ The server should respond with the message:
 
 ```json
 {
-	"id": "ten",
-    "response": "bye"
+        "id": "ten", 
+        "response": "bye"
 }
 ```
 
@@ -157,21 +157,49 @@ The last part of this mini-project is to add support to `WikiMediator` to find t
 Basically, we are interested to know the minimum number of link clicks it takes to start from a page and reach another page.
 To do so, a method with the following signature should be included in `WikiMediator`:
 ```java
-List<String> ShortestPath(String pageTitle1, String pageTitle2)
+List<String> shortestPath(String pageTitle1, String pageTitle2, int timeout) throws TimeoutException
 ```
 * If a path exists, a list of page titles (including the starting and ending pages) on the shortest path should be returned.
-* If there are two or more shortest paths with equal length, the one with the lowest lexicographical value is to be returned.
-* If no path exists between two pages, an empty List should be returned. 
+* If there are two or more shortest paths then the one with the lowest lexicographical value is to be returned.
+* If no path exists between two pages, an empty `List` should be returned. 
+
+The `timeout` parameter is the duration - in seconds - that is permitted for this operation, otherwise a [`TimeoutException`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/TimeoutException.html) should be thrown.
+
+`WikiMediatorServer` should also support this operation using the following `JSON` request:
+
+```json
+{
+	"id": "3",
+	"type": "shortestPath",
+	"pageTitle1": "Philosophy",
+	"pageTitle2": "Barack Obama",
+	"timeout": "30"
+}
+```
+
+and such a request *could* have the following response (this example may not be the lexicographically smallest response):
+
+```json
+  "id": "3",
+  "status": "success",
+  "response": ["Philosophy", "African Americans", "Barack Obama"]
+```
+
+that indicates that there is a two-step path from "Philosophy" to "Barack Obama" via "African Americans". 
+
+If there is no path then `"status"` should be `"success"` and `"response"` should be the empty array `[]`. In the case of a timeout, `"status"` should be `"failed"` and `"response"` would be `"Operation timed out"`.
 
 ## Assessment Hints
 
 - You should write specs, rep invariants, abstraction functions, and thread-safety conditions.
 - You should test your code and achieve: 
-   - 90% lines of code coverage;
-   - 90% branch coverage.
-- Each task is worth one point.
-- An extra one point is for writing clean and modular code.
-- If tasks are functionally correct but the overall submission is lacking in details such as specs, RIs, AFs and thread-safety conditions or is lacking in test coverage then the grade will be lowered by up to one point.
+   - 95% lines of code coverage;
+   - 85% branch coverage.
+- Grading is holistic but here is an approximation:
+  - Each task is worth one point.
+  - An extra one point is for writing clean and modular code.
+  - If tasks are functionally correct but the overall submission is lacking in essentials such as specs, RIs, AFs and thread-safety conditions or is lacking in test coverage then the grade will be lowered.
+- Conform to the expected method signatures. If in doubt, ask!
 
 ## Hints
 
