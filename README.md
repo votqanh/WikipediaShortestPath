@@ -6,7 +6,7 @@ This mini-project involves interacting with Wikipedia and performing many operat
 
 Some of the learning goals for this mini-project are:
 
-* Working with external libraries (such as `jwiki` ,`gson`, and `antlr`);
+* Working with external libraries (such as `jwiki` and `gson`);
 * Implementing reusable datatypes such as a `FSFTBuffer`;
 * Using multi-threading to handle certain aspects of the implementation;
 * Managing shared memory when multiple threads are involved;
