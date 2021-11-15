@@ -60,7 +60,8 @@ A `WikiMediator` instance should support the following basic operations:
 2. `String getPage(String pageTitle)`: Given a `pageTitle`, return the text associated with the Wikipedia page that matches `pageTitle`.
 3. `List<String> zeitgeist(int limit)`: Return the most common `String`s used in `search` and `getPage` requests, with items being sorted in non-increasing count order. When many requests have been made, return only `limit` items.
 4. `List<String> trending(int timeLimitInSeconds, int maxItems)`: Similar to `zeitgeist()`, but returns the most frequent requests made in the last `timeLimitInSeconds` seconds. This method should report at most `maxItems` of the most frequent requests. 
-5. `int peakLoad30s()`: What is the maximum number of requests seen in any 30-second window? The request count is to include all requests made using the public API of `WikiMediator`, and therefore counts all **five** methods listed as **basic page requests**.
+5. `int windowedPeakLoad(int timeWindowInSeconds)`: What is the maximum number of requests seen in any time window of a given length? The request count is to include all requests made using the public API of `WikiMediator`, and therefore counts all **five** methods listed as **basic page requests**. (There is one more request that appears later, `shortestPath`, and that should also be included if you do implement that method.)
+6. `int windowedPeakLoad()`: This is an overloaded version of the previous method where the time window defaults to 30 seconds. (Calls to this method also affect peak load.)
 
 ## Task 4: `WikiMediatorServer`
 
