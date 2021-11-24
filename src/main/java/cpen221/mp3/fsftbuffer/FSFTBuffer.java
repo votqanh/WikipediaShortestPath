@@ -15,8 +15,8 @@ public class FSFTBuffer<T extends Bufferable> {
     private final int timeout;
     private int currentCapacity;
 
-    private final TreeMap<Long, ArrayList<T>> buffer = new TreeMap<>();
-    private final ArrayList<String> bufferIds = new ArrayList<>();
+    private final Map<Long, ArrayList<T>> buffer = new LinkedHashMap<>();
+    private final List<String> bufferIds = new ArrayList<>();
 
     /* TODO: Implement this datatype */
 
@@ -67,9 +67,15 @@ public class FSFTBuffer<T extends Bufferable> {
 
         // remove least recently accessed
         if (currentCapacity >= capacity) {
-            bufferIds.remove(buffer.get(buffer.firstKey()).get(0).id());
-            buffer.get(buffer.firstKey()).remove(0);
+            Map.Entry<Long, ArrayList<T>> key = buffer.entrySet().iterator().next();
+
+            bufferIds.remove(buffer.get(key).get(0).id());
+            buffer.get(key).remove(0);
             currentCapacity--;
+
+            if (buffer.get(key).size() == 0) {
+                buffer.remove(key);
+            }
         }
 
         // if another object is added in the same second
@@ -105,7 +111,7 @@ public class FSFTBuffer<T extends Bufferable> {
         // if object is in the cache, wait until it's been properly added
         if (bufferIds.contains(id)) {
             while (true) {
-                for (long time : buffer.keySet()) {
+                for (long time : buffer.keySet()) {             // more efficient -> start where we last left off
                     for (T t : buffer.get(time)) {
                         if (Objects.equals(t.id(), id)) {
                             update(t);
