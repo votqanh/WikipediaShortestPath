@@ -1,6 +1,7 @@
 package cpen221.mp3.fsftbuffer;
 import java.lang.System;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class FSFTBuffer<T extends Bufferable> {
 
@@ -15,6 +16,7 @@ public class FSFTBuffer<T extends Bufferable> {
     private int currentCapacity;
 
     private final TreeMap<Long, ArrayList<T>> buffer = new TreeMap<>();
+    private final ArrayList<String> bufferIds = new ArrayList<>();
 
     /* TODO: Implement this datatype */
 
@@ -45,7 +47,10 @@ public class FSFTBuffer<T extends Bufferable> {
      * If the buffer is full then remove the least recently accessed
      * object to make room for the new object.
      */
-    public boolean put(T t) {
+    public synchronized boolean put(T t) {
+        // signal to get() that t exists and get() should wait until it's been added
+        bufferIds.add(t.id());
+
         long currentTime = System.currentTimeMillis() / 1000;
 
         Set<Long> times = new HashSet<>(buffer.keySet());
@@ -53,7 +58,8 @@ public class FSFTBuffer<T extends Bufferable> {
         for (long time : times) {
             if (time >= time + timeout) {
                 buffer.remove(time);
-                currentCapacity--;
+                bufferIds.removeAll(buffer.get(time).stream().map(Bufferable::id).collect(Collectors.toList()));
+                currentCapacity -= buffer.get(time).size();
             } else {
                 break;
             }
@@ -61,7 +67,9 @@ public class FSFTBuffer<T extends Bufferable> {
 
         // remove least recently accessed
         if (currentCapacity >= capacity) {
+            bufferIds.remove(buffer.get(buffer.firstKey()).get(0).id());
             buffer.get(buffer.firstKey()).remove(0);
+            currentCapacity--;
         }
 
         // if another object is added in the same second
@@ -89,15 +97,21 @@ public class FSFTBuffer<T extends Bufferable> {
      * @return the object that matches the identifier from the
      * buffer
      */
-    public T get(String id) throws NoSuchElementException {
+    public synchronized T get(String id) throws NoSuchElementException {
         /* Do not return null. Throw a suitable checked exception when an object
             is not in the cache. You can add the checked exception to the method
             signature. */
 
-        for (long time : buffer.keySet()) {
-            for (T t : buffer.get(time)) {
-                if (Objects.equals(t.id(), id)) {
-                    return t;
+        // if object is in the cache, wait until it's been properly added
+        if (bufferIds.contains(id)) {
+            while (true) {
+                for (long time : buffer.keySet()) {
+                    for (T t : buffer.get(time)) {
+                        if (Objects.equals(t.id(), id)) {
+                            update(t);
+                            return t;
+                        }
+                    }
                 }
             }
         }
@@ -113,13 +127,14 @@ public class FSFTBuffer<T extends Bufferable> {
      * @param id the identifier of the object to "touch"
      * @return true if successful and false otherwise
      */
-    public boolean touch(String id) {
+    public synchronized boolean touch(String id) {
         Set<Long> times = new HashSet<>(buffer.keySet());
 
         for (long time :times) {
             for (T t : buffer.get(time)) {
                 if (Objects.equals(t.id(), id)) {
                     buffer.get(time).remove(t);
+                    currentCapacity--;
                     newTime(System.currentTimeMillis() / 1000, t);
                     return true;
                 }
@@ -136,13 +151,14 @@ public class FSFTBuffer<T extends Bufferable> {
      * @param t the object to update
      * @return true if successful and false otherwise
      */
-    public boolean update(T t) {
+    public synchronized boolean update(T t) {
         Set<Long> times = new HashSet<>(buffer.keySet());
 
         for (long time :times) {
             for (T t1 : buffer.get(time)) {
                 if (Objects.equals(t.id(), t1.id())) {
                     buffer.get(time).remove(t);
+                    currentCapacity--;
                     newTime(System.currentTimeMillis() / 1000, t);
                     return true;
                 }
