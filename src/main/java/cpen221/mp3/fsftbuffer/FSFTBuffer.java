@@ -43,12 +43,21 @@ public class FSFTBuffer<T extends Bufferable> {
     }
 
     /**
-     * Add a value to the buffer.
+     * Add an object to the buffer.
      * If the buffer is full then remove the least recently accessed
      * object to make room for the new object.
+     *
+     *
+     * @param t object to be added to the buffer
+     * @return true if successful and false if it is
+     *          already in the buffer
      */
     public synchronized boolean put(T t) {
         // signal to get() that t exists and get() should wait until it's been added
+
+        if (bufferIds.contains(t.id()))
+            return false;
+
         bufferIds.add(t.id());
 
         long currentTime = System.currentTimeMillis() / 1000;
@@ -106,7 +115,7 @@ public class FSFTBuffer<T extends Bufferable> {
      * @param id the identifier of the object to be retrieved
      * @return the object that matches the identifier from the
      * buffer
-     * @throws NoSuchElementException if object is not in cache
+     * @throws NoSuchElementException if object is not in the buffer
      */
     public synchronized T get(String id) throws NoSuchElementException {
         removeStale();
@@ -114,7 +123,7 @@ public class FSFTBuffer<T extends Bufferable> {
         // if object is in the cache, wait until it's been properly added
         if (bufferIds.contains(id)) {
             while (true) {
-                for (long time : buffer.keySet()) {             // more efficient -> start where we last left off
+                for (long time : buffer.keySet()) {             // TODO: change to start where we last left off
                     for (T t : buffer.get(time)) {
                         if (Objects.equals(t.id(), id)) {
                             update(t);
@@ -137,19 +146,7 @@ public class FSFTBuffer<T extends Bufferable> {
      * @return true if successful and false otherwise
      */
     public synchronized boolean touch(String id) {
-        Set<Long> times = new HashSet<>(buffer.keySet());
-
-        for (long time :times) {
-            for (T t : buffer.get(time)) {
-                if (Objects.equals(t.id(), id)) {
-                    buffer.get(time).remove(t);
-                    currentCapacity--;
-                    newTime(System.currentTimeMillis() / 1000, t);
-                    return true;
-                }
-            }
-        }
-        return false;
+        return access(id);
     }
 
     /**
@@ -161,12 +158,29 @@ public class FSFTBuffer<T extends Bufferable> {
      * @return true if successful and false otherwise
      */
     public synchronized boolean update(T t) {
+        return access(t.id());
+    }
+
+    /**
+     * Helper method for touch and update
+     *
+     * @param id the object to access
+     * @return true if successful and false otherwise
+     */
+    public synchronized boolean access(String id) {
+        removeStale();
+
         Set<Long> times = new HashSet<>(buffer.keySet());
 
-        for (long time :times) {
-            for (T t1 : buffer.get(time)) {
-                if (Objects.equals(t.id(), t1.id())) {
+        for (long time : times) {
+            for (T t : buffer.get(time)) {
+                if (Objects.equals(id, t.id())) {
                     buffer.get(time).remove(t);
+
+                    if (buffer.get(time).size() == 0) {
+                        buffer.remove(time);
+                    }
+
                     currentCapacity--;
                     newTime(System.currentTimeMillis() / 1000, t);
                     return true;
