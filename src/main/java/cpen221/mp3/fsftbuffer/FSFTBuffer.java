@@ -53,17 +53,7 @@ public class FSFTBuffer<T extends Bufferable> {
 
         long currentTime = System.currentTimeMillis() / 1000;
 
-        Set<Long> times = new HashSet<>(buffer.keySet());
-
-        for (long time : times) {
-            if (time >= time + timeout) {
-                buffer.remove(time);
-                bufferIds.removeAll(buffer.get(time).stream().map(Bufferable::id).collect(Collectors.toList()));
-                currentCapacity -= buffer.get(time).size();
-            } else {
-                break;
-            }
-        }
+        removeStale();
 
         // remove least recently accessed
         if (currentCapacity >= capacity) {
@@ -87,6 +77,7 @@ public class FSFTBuffer<T extends Bufferable> {
             }
         }
 
+        //else add object to new time
         newTime(currentTime, t);
         return true;
     }
@@ -98,15 +89,27 @@ public class FSFTBuffer<T extends Bufferable> {
         currentCapacity++;
     }
 
+    private void removeStale() {
+        Set<Long> times = new HashSet<>(buffer.keySet());
+        for (long time : times) {
+            if (time >= time + timeout) {
+                buffer.remove(time);
+                bufferIds.removeAll(buffer.get(time).stream().map(Bufferable::id).collect(Collectors.toList()));
+                currentCapacity -= buffer.get(time).size();
+            } else {
+                break;
+            }
+        }
+    }
+
     /**
      * @param id the identifier of the object to be retrieved
      * @return the object that matches the identifier from the
      * buffer
+     * @throws NoSuchElementException if object is not in cache
      */
     public synchronized T get(String id) throws NoSuchElementException {
-        /* Do not return null. Throw a suitable checked exception when an object
-            is not in the cache. You can add the checked exception to the method
-            signature. */
+        removeStale();
 
         // if object is in the cache, wait until it's been properly added
         if (bufferIds.contains(id)) {
