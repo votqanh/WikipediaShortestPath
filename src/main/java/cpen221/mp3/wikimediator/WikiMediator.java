@@ -1,8 +1,15 @@
 package cpen221.mp3.wikimediator;
 
 import cpen221.mp3.fsftbuffer.FSFTBuffer;
+import org.fastily.jwiki.core.Wiki;
+import org.fastily.jwiki.dwrap.Revision;
+import org.fastily.jwiki.core.Wiki;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.NoSuchElementException;
+
 
 public class WikiMediator {
 
@@ -18,8 +25,9 @@ public class WikiMediator {
         values like null.
 
      */
-    private final int capacity;
-    private final int stalenessInterval;
+    private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
+    private final FSFTBuffer<WikiPage> wikiBuffer;
+    private final HashMap<String,ArrayList<Long>> requestTracker = new HashMap<>();
 
     /**
      *
@@ -27,8 +35,7 @@ public class WikiMediator {
      * @param stalenessInterval
      */
     public WikiMediator(int capacity, int stalenessInterval) {
-        this.capacity = capacity;
-        this.stalenessInterval = stalenessInterval;
+        wikiBuffer = new FSFTBuffer<WikiPage>(capacity, stalenessInterval);
 
     }
 
@@ -38,8 +45,12 @@ public class WikiMediator {
      * @param limit
      * @return
      */
-    List<String> search(String query, int limit) {
-        return null;
+    public List<String> search(String query, int limit) {
+        long currentTime = System.currentTimeMillis() / 1000;
+        ArrayList<String> searchResults =  wiki.search(query, limit);
+        searchResults.forEach(title -> wikiBuffer.put(new WikiPage(title, wiki.getPageText(title))));
+        trackRequest(query, currentTime);
+        return searchResults;
     }
 
     /**
@@ -48,7 +59,15 @@ public class WikiMediator {
      * @return
      */
     String getPage(String pageTitle) {
-        return null;
+        long currentTime = System.currentTimeMillis() / 1000;
+        String text;
+        try {
+            text = wikiBuffer.get(pageTitle).getText();
+        } catch (NoSuchElementException e) {
+            text = wiki.getPageText(pageTitle);
+        }
+        trackRequest(pageTitle, currentTime);
+        return text;
     }
 
     /**
@@ -57,6 +76,7 @@ public class WikiMediator {
      * @return
      */
     List<String> zeitgeist(int limit) {
+
         return null;
     }
 
@@ -86,6 +106,15 @@ public class WikiMediator {
      */
     int windowedPeakLoad() {
         return -1;
+    }
+
+    private void trackRequest(String request, long time) {
+        if (!requestTracker.containsKey(request)) {
+            requestTracker.put(request, new ArrayList<>());
+        }
+        else {
+            requestTracker.get(request).add(time);
+        }
     }
 
 }
