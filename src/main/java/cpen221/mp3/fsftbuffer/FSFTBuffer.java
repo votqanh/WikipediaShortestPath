@@ -146,28 +146,6 @@ public class FSFTBuffer<T extends Bufferable> {
      * @return true if successful and false otherwise
      */
     public synchronized boolean touch(String id) {
-        return access(id);
-    }
-
-    /**
-     * Update an object in the buffer.
-     * This method updates an object and acts like a "touch" to
-     * renew the object in the cache.
-     *
-     * @param t the object to update
-     * @return true if successful and false otherwise
-     */
-    public synchronized boolean update(T t) {
-        return access(t.id());
-    }
-
-    /**
-     * Helper method for touch and update
-     *
-     * @param id the object to access
-     * @return true if successful and false otherwise
-     */
-    public synchronized boolean access(String id) {
         removeStale();
 
         Set<Long> times = new HashSet<>(buffer.keySet());
@@ -188,5 +166,17 @@ public class FSFTBuffer<T extends Bufferable> {
             }
         }
         return false;
+    }
+
+    /**
+     * Update an object in the buffer.
+     * This method updates an object and acts like a "touch" to
+     * renew the object in the cache.
+     *
+     * @param t the object to update
+     * @return true if successful and false otherwise
+     */
+    public synchronized boolean update(T t) {
+        return touch(t.id());
     }
 }
