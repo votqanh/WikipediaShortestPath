@@ -20,6 +20,6 @@ public class WikiPage implements Bufferable {
     }
 
     public String id() {
-        return title;
+        return getTitle();
     }
 }

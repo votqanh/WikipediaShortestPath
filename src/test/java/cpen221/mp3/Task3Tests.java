@@ -16,17 +16,45 @@ public class Task3Tests {
 
     @Test
     public void searchDog() {
-        ArrayList<String> list = new ArrayList<>();
-        list.add("poodle");
-        Assertions.assertEquals(list, mediator.search("dog",10));
+        List<String> searchResults = mediator.search("dog",10);
+        Assertions.assertTrue(searchResults.contains("Dog"));
+        Assertions.assertEquals(10, searchResults.size());
     }
+
+    @Test
+    public void searchGibberish() {
+        List<String> searchResults = mediator.search("zhk gdaireuuerwrhc awbuv illekawrbvaf jvhb ",10);
+        Assertions.assertEquals(0, searchResults.size());
+    }
+
+    @Test
+    public void getPageBegleri() {
+        String pageText = mediator.getPage("begleri");
+        Assertions.assertTrue(pageText.contains("begleri"));
+        Assertions.assertEquals(0,0);
+    }
+
+    @Test
+    public void getPageBegleriCached() {
+        String pageText = mediator.getPage("begleri");
+        String pageText2 = mediator.getPage("begleri");
+        String pageText3 = mediator.getPage("begleri");
+        Assertions.assertTrue(pageText.contains("begleri"));
+        Assertions.assertEquals(0,0);
+    }
+
+    @Test
+    public void getPageGibberish() {
+        String pageText = mediator.getPage("awejhkeubyqci r bic whc nkh");
+        Assertions.assertEquals(0, pageText.length());
+    }
+
     @Test
     public void zeit() {
         ArrayList<String> list = new ArrayList<>();
         list.add("dog");
         list.add("fish");
         list.add("cat");
-
 
         mediator.search("cat",4);
         mediator.getPage("fish");
@@ -36,5 +64,29 @@ public class Task3Tests {
         mediator.search("dog",4);
         Assertions.assertEquals(list, mediator.zeitgeist(5));
     }
+
+    @Test
+    public void zeitLimit() {
+        ArrayList<String> list = new ArrayList<>();
+        list.add("dog");
+        list.add("fish");
+
+        mediator.search("cat",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        mediator.search("dog",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        Assertions.assertEquals(list, mediator.zeitgeist(2));
+    }
+
+    @Test
+    public void zeitEmpty() {
+        ArrayList<String> list = new ArrayList<>();
+        Assertions.assertEquals(list, mediator.zeitgeist(5));
+    }
+
+
+
 
 }

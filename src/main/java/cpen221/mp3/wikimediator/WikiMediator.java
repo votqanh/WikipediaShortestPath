@@ -26,7 +26,7 @@ public class WikiMediator {
     private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
     private final FSFTBuffer<WikiPage> wikiBuffer;
     //private final HashMap<String,ArrayList<Long>> requestTracker = new HashMap<>();
-    private final ArrayList<Request> basicRequestsTracker = new ArrayList<>();
+    private final ArrayList<Request> requestsTracker = new ArrayList<>();
     private final ArrayList<Long> allRequestsTracker = new ArrayList<>();
 
     /**
@@ -51,7 +51,7 @@ public class WikiMediator {
         searchResults.forEach(title -> wikiBuffer.put(new WikiPage(title, wiki.getPageText(title))));
         trackRequest(query, currentTime);
         allRequestsTracker.add(currentTime);
-        System.out.println(basicRequestsTracker);
+        System.out.println(requestsTracker);
         return searchResults;
     }
 
@@ -67,10 +67,13 @@ public class WikiMediator {
             text = wikiBuffer.get(pageTitle).getText();
         } catch (NoSuchElementException e) {
             text = wiki.getPageText(pageTitle);
+            if (!text.equals("")) {
+                wikiBuffer.put(new WikiPage(pageTitle, text));
+            }
         }
         trackRequest(pageTitle, currentTime);
         allRequestsTracker.add(currentTime);
-        System.out.println(basicRequestsTracker);
+        System.out.println(requestsTracker);
         return text;
     }
 
@@ -82,7 +85,7 @@ public class WikiMediator {
     public List<String> zeitgeist(int limit) {
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
-        return basicRequestsTracker.stream().sorted((r1, r2) -> r2.getCountList().size() - r1.getCountList().size())
+        return requestsTracker.stream().sorted((r1, r2) -> r2.getCountList().size() - r1.getCountList().size())
                 .limit(limit).map(request -> request.getRequestString()).collect(Collectors.toList());
     }
 
@@ -95,7 +98,7 @@ public class WikiMediator {
     public List<String> trending(int timeLimitInSeconds, int maxItems) {
         long currentTime = System.currentTimeMillis() / 1000;
         ArrayList<Request> filteredRequestTracker = new ArrayList<>();
-        basicRequestsTracker.stream().forEach(request -> {
+        requestsTracker.stream().forEach(request -> {
             try {
                 filteredRequestTracker.add(request.deepFilteredCopy(currentTime,timeLimitInSeconds));
             } catch (NoRecentRequestsException ignored) {}
@@ -104,7 +107,7 @@ public class WikiMediator {
 
         allRequestsTracker.add(currentTime);
         return filteredRequestTracker.stream().sorted((r1,r2) -> r2.getCountList().size() - r1.getCountList().size())
-                .limit(maxItems).map(request -> request.getRequestString()).collect(Collectors.toList());
+                .limit(maxItems).map(Request::getRequestString).collect(Collectors.toList());
     }
 
     /**
@@ -116,11 +119,22 @@ public class WikiMediator {
     public int windowedPeakLoad(int timeWindowInSeconds) {
         long currentTime = System.currentTimeMillis() / 1000;
         ArrayList<Long> requestsInWindow;
-        for (long time:allRequestsTracker) {
-            //add time and some more
+        int peakLoad = 0;
+        for (int i=0;i < allRequestsTracker.size();i++) {
+            requestsInWindow = new ArrayList<>();
+            for (int j=i;j<allRequestsTracker.size();j++) {
+                if (allRequestsTracker.get(j) >= allRequestsTracker.get(i) + timeWindowInSeconds) {
+                    break;
+                }
+                requestsInWindow.add(allRequestsTracker.get(j));
+            }
+            if (requestsInWindow.size() > peakLoad) {
+                peakLoad = requestsInWindow.size();
+            }
+
         }
         allRequestsTracker.add(currentTime);
-        return -1;
+        return peakLoad;
     }
 
     /**
@@ -138,13 +152,13 @@ public class WikiMediator {
 //        else {
 //            requestTracker.get(request).add(time);
 //        }
-        for (int i = 0; i< basicRequestsTracker.size(); i++) {
-            if (basicRequestsTracker.get(i).getRequestString().equals(request)) {
-                basicRequestsTracker.get(i).addInstance(time);
+        for (int i = 0; i< requestsTracker.size(); i++) {
+            if (requestsTracker.get(i).getRequestString().equals(request)) {
+                requestsTracker.get(i).addInstance(time);
                 return;
             }
         }
-        basicRequestsTracker.add(new Request(request, time));
+        requestsTracker.add(new Request(request, time));
 
     }
 
