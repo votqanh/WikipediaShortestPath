@@ -21,15 +21,15 @@ public class JWiki {
 //        System.out.println(wiki.getPageText("Main Page"));
 //        System.out.println(wiki.getCategoriesOnPage(pageTitle));
 //        System.out.println(wiki.getLinksOnPage(pageTitle));
-        System.out.println(wiki.search("Hello", 10));
-        System.out.println(wiki.search(pageTitle, 5));
-        System.out.println(wiki.getCategoriesOnPage(pageTitle));
-//        List<Revision> rList = wiki.getRevisions(pageTitle, 10, false, null, null);
-//        if (rList.size() > 0) {
-//            Revision latestRev = rList.get(0);
-//            System.out.println(latestRev.user);
-//            System.out.println(wiki.getContribs(latestRev.user, 10, false));
-//        }
+//        System.out.println(wiki.search("Hello", 10));
+//        System.out.println(wiki.search(pageTitle, 5));
+//        System.out.println(wiki.getCategoriesOnPage(pageTitle));
+        List<Revision> rList = wiki.getRevisions(pageTitle, 10, false, null, null);
+        if (rList.size() > 0) {
+            Revision latestRev = rList.get(0);
+            System.out.println(latestRev.user);
+            //System.out.println(wiki.getContribs(latestRev.user, 10, false));
+        }
         System.exit(0);
     }
 }
