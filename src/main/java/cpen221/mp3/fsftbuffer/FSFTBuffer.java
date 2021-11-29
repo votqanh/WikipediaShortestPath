@@ -5,6 +5,20 @@ import java.util.stream.Collectors;
 
 public class FSFTBuffer<T extends Bufferable> {
 
+    /*
+        AF:
+        - Last access time of an object is greater than the time it was added.
+        - touch() and update() do not change last access time.
+        - An object cannot be added to the buffer if it is already in the buffer.
+
+        RI:
+        - {@code buffer} entries are sorted by the order they were added.
+        - {@code bufferIds} contains ids of all objects currently in buffer.
+        - Objects created at the same millisecond are put in the same map entry for ease of removal.
+        - lastAccessed is initially -1 if the object has not been accessed.
+     */
+
+
     /* the default buffer size is 32 objects */
     public static final int DSIZE = 32;
 
@@ -15,7 +29,7 @@ public class FSFTBuffer<T extends Bufferable> {
     private final int timeout;
     private int currentCapacity;
 
-    private final Map<Long, ArrayList<T>> buffer = new LinkedHashMap<>();
+    private final Map<Long, LinkedHashMap<Long, T>> buffer = new LinkedHashMap<>();
     private final List<String> bufferIds = new ArrayList<>();
 
     /* TODO: Implement this datatype */
@@ -54,57 +68,77 @@ public class FSFTBuffer<T extends Bufferable> {
      */
     public synchronized boolean put(T t) {
         // signal to get() that t exists and get() should wait until it's been added
-
         if (bufferIds.contains(t.id()))
             return false;
 
         bufferIds.add(t.id());
 
-        long currentTime = System.currentTimeMillis() / 1000;
+        long currentTime = System.currentTimeMillis();
 
         removeStale();
 
         // remove least recently accessed
         if (currentCapacity >= capacity) {
-            Map.Entry<Long, ArrayList<T>> key = buffer.entrySet().iterator().next();
+            List<Long> accessTimes = buffer.keySet().stream().map(x -> buffer.get(x).keySet())
+                    .flatMap(Collection::stream).filter(x -> x != -1).collect(Collectors.toList());
 
-            bufferIds.remove(buffer.get(key).get(0).id());
-            buffer.get(key).remove(0);
-            currentCapacity--;
+            // no object has been accessed = none to evict = no more space
+            if (accessTimes.isEmpty())
+                return false;
 
-            if (buffer.get(key).size() == 0) {
-                buffer.remove(key);
+            long leastRecent = Collections.min(accessTimes);
+
+            outer:
+            for (long time : buffer.keySet()) {
+                LinkedHashMap<Long, T> time_object_map = buffer.get(time);
+                for (long lastAccessed : time_object_map.keySet()) {
+                    if (lastAccessed == leastRecent) {
+                        time_object_map.remove(lastAccessed);
+                        currentCapacity--;
+                    }
+
+                    if (time_object_map.size() == 0) {
+                        buffer.remove(time);
+                    }
+
+                    break outer;
+                }
             }
         }
 
-        // if another object is added in the same second
+        // if another object is added in the same millisecond
         for (long time : buffer.keySet()) {
             if (time == currentTime) {
-                buffer.get(time).add(t);
+                buffer.get(time).put((long) -1, t);
                 currentCapacity++;
                 return true;
             }
         }
 
         //else add object to new time
-        newTime(currentTime, t);
+        newTime(currentTime, t, -1);
+        currentCapacity++;
         return true;
     }
 
-    private void newTime(long currentTime, T t) {
-        ArrayList<T> l = new ArrayList<>();
-        l.add(t);
-        buffer.put(currentTime, l);
-        currentCapacity++;
+    private synchronized void newTime(long currentTime, T t, long lastAccessed) {
+        if (!buffer.keySet().stream().map(x -> buffer.get(x).entrySet()).flatMap(Collection::stream)
+                .map(Map.Entry::getValue).collect(Collectors.toList()).contains(t)) {
+            LinkedHashMap<Long, T> m = new LinkedHashMap<>();
+            m.put(lastAccessed, t);
+            buffer.put(currentTime, m);
+        }
     }
 
     private void removeStale() {
         Set<Long> times = new HashSet<>(buffer.keySet());
         for (long time : times) {
-            if (time >= time + timeout) {
+            if (time >= time + timeout * 1000L) {
+                LinkedHashMap<Long, T> time_object_map = buffer.get(time);
                 buffer.remove(time);
-                bufferIds.removeAll(buffer.get(time).stream().map(Bufferable::id).collect(Collectors.toList()));
-                currentCapacity -= buffer.get(time).size();
+                bufferIds.removeAll(time_object_map.keySet().stream().map(x -> time_object_map.get(x).id())
+                        .collect(Collectors.toList()));
+                currentCapacity -= time_object_map.size();
             } else {
                 break;
             }
@@ -118,15 +152,25 @@ public class FSFTBuffer<T extends Bufferable> {
      * @throws NoSuchElementException if object is not in the buffer
      */
     public synchronized T get(String id) throws NoSuchElementException {
+        long currentTime = System.currentTimeMillis();
+
         removeStale();
 
         // if object is in the cache, wait until it's been properly added
         if (bufferIds.contains(id)) {
             while (true) {
                 for (long time : buffer.keySet()) {             // TODO: change to start where we last left off
-                    for (T t : buffer.get(time)) {
+                    LinkedHashMap<Long, T> time_object_map = buffer.get(time);
+                    for (long lastAccessed : time_object_map.keySet()) {
+                        T t = time_object_map.get(lastAccessed);
                         if (Objects.equals(t.id(), id)) {
-                            update(t);
+                            time_object_map.remove(lastAccessed);
+
+                            if (time_object_map.size() == 0) {
+                                buffer.remove(time);
+                            }
+
+                            newTime(currentTime, t, currentTime);
                             return t;
                         }
                     }
@@ -145,22 +189,23 @@ public class FSFTBuffer<T extends Bufferable> {
      * @param id the identifier of the object to "touch"
      * @return true if successful and false otherwise
      */
-    public synchronized boolean touch(String id) {
+    public boolean touch(String id) {
+        long currentTime = System.currentTimeMillis();
+
         removeStale();
 
-        Set<Long> times = new HashSet<>(buffer.keySet());
-
-        for (long time : times) {
-            for (T t : buffer.get(time)) {
+        for (long time : buffer.keySet()) {
+            LinkedHashMap<Long, T> time_object_map = buffer.get(time);
+            for (long lastAccessed : time_object_map.keySet()) {
+                T t = time_object_map.get(lastAccessed);
                 if (Objects.equals(id, t.id())) {
-                    buffer.get(time).remove(t);
+                    time_object_map.remove(lastAccessed);
 
-                    if (buffer.get(time).size() == 0) {
+                    if (time_object_map.size() == 0) {
                         buffer.remove(time);
                     }
 
-                    currentCapacity--;
-                    newTime(System.currentTimeMillis() / 1000, t);
+                    newTime(currentTime, t, lastAccessed);
                     return true;
                 }
             }
@@ -176,7 +221,7 @@ public class FSFTBuffer<T extends Bufferable> {
      * @param t the object to update
      * @return true if successful and false otherwise
      */
-    public synchronized boolean update(T t) {
+    public boolean update(T t) {
         return touch(t.id());
     }
 }
