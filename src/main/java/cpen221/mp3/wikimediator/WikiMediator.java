@@ -25,7 +25,6 @@ public class WikiMediator {
      */
     private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
     private final FSFTBuffer<WikiPage> wikiBuffer;
-    //private final HashMap<String,ArrayList<Long>> requestTracker = new HashMap<>();
     private final ArrayList<Request> requestsTracker = new ArrayList<>();
     private final ArrayList<Long> allRequestsTracker = new ArrayList<>();
 
@@ -35,7 +34,7 @@ public class WikiMediator {
      * @param stalenessInterval
      */
     public WikiMediator(int capacity, int stalenessInterval) {
-        wikiBuffer = new FSFTBuffer<WikiPage>(capacity, stalenessInterval);
+        wikiBuffer = new FSFTBuffer<>(capacity, stalenessInterval);
 
     }
 
@@ -47,8 +46,10 @@ public class WikiMediator {
      */
     public List<String> search(String query, int limit) {
         long currentTime = System.currentTimeMillis() / 1000;
+        System.out.println(currentTime);
+
         ArrayList<String> searchResults =  wiki.search(query, limit);
-        searchResults.forEach(title -> wikiBuffer.put(new WikiPage(title, wiki.getPageText(title))));
+
         trackRequest(query, currentTime);
         allRequestsTracker.add(currentTime);
         System.out.println(requestsTracker);
@@ -62,6 +63,8 @@ public class WikiMediator {
      */
     public String getPage(String pageTitle) {
         long currentTime = System.currentTimeMillis() / 1000;
+        System.out.println(currentTime);
+
         String text;
         try {
             text = wikiBuffer.get(pageTitle).getText();
@@ -84,9 +87,11 @@ public class WikiMediator {
      */
     public List<String> zeitgeist(int limit) {
         long currentTime = System.currentTimeMillis() / 1000;
+        System.out.println(currentTime);
+
         allRequestsTracker.add(currentTime);
         return requestsTracker.stream().sorted((r1, r2) -> r2.getCountList().size() - r1.getCountList().size())
-                .limit(limit).map(request -> request.getRequestString()).collect(Collectors.toList());
+                .limit(limit).map(Request::getRequestString).collect(Collectors.toList());
     }
 
     /**
@@ -97,8 +102,10 @@ public class WikiMediator {
      */
     public List<String> trending(int timeLimitInSeconds, int maxItems) {
         long currentTime = System.currentTimeMillis() / 1000;
+        System.out.println(currentTime);
+
         ArrayList<Request> filteredRequestTracker = new ArrayList<>();
-        requestsTracker.stream().forEach(request -> {
+        requestsTracker.forEach(request -> {
             try {
                 filteredRequestTracker.add(request.deepFilteredCopy(currentTime,timeLimitInSeconds));
             } catch (NoRecentRequestsException ignored) {}
@@ -118,6 +125,7 @@ public class WikiMediator {
      */
     public int windowedPeakLoad(int timeWindowInSeconds) {
         long currentTime = System.currentTimeMillis() / 1000;
+        System.out.println(currentTime);
         ArrayList<Long> requestsInWindow;
         int peakLoad = 0;
         for (int i=0;i < allRequestsTracker.size();i++) {
