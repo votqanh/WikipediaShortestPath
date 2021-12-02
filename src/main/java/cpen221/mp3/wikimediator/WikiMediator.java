@@ -201,7 +201,11 @@ public class WikiMediator {
 
         processed_paths.sort(new ListComparator<>());
 
-        return processed_paths.get(processed_paths.size() - 1);
+        List<String> shortestPath = processed_paths.get(processed_paths.size() - 1);
+        shortestPath.add(0, pageTitle1);
+        shortestPath.add(pageTitle2);
+
+        return shortestPath;
     }
 
     private List<String> BFS(String title, String target, List<String> path, int depth) {
