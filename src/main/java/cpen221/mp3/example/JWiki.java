@@ -2,7 +2,6 @@ package cpen221.mp3.example;
 
 import org.fastily.jwiki.core.Wiki;
 import org.fastily.jwiki.dwrap.Revision;
-import org.fastily.jwiki.core.Wiki;
 
 import java.util.List;
 

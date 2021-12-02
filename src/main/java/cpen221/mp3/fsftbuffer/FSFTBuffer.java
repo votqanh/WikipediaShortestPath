@@ -32,8 +32,6 @@ public class FSFTBuffer<T extends Bufferable> {
     private final Map<Long, LinkedHashMap<Long, T>> buffer = new LinkedHashMap<>();
     private final List<String> bufferIds = new ArrayList<>();
 
-    /* TODO: Implement this datatype */
-
     /**
      * Create a buffer with a fixed capacity and a timeout value.
      * Objects in the buffer that have not been refreshed within the
