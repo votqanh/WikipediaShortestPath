@@ -86,6 +86,77 @@ public class Task3Tests {
         Assertions.assertEquals(list, mediator.zeitgeist(5));
     }
 
+    @Test
+    public void trending() {
+        ArrayList<String> list = new ArrayList<>();
+        list.add("dog");
+        list.add("fish");
+        list.add("cat");
+
+        mediator.search("cat",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        mediator.search("dog",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        Assertions.assertEquals(list, mediator.trending(10,5));
+    }
+
+    @Test
+    public void trendingMaxItems() {
+        ArrayList<String> list = new ArrayList<>();
+        list.add("dog");
+        list.add("fish");
+
+        mediator.search("cat",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        mediator.search("dog",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        Assertions.assertEquals(list, mediator.trending(5,2));
+    }
+
+    @Test
+    public void trendingZeroTime() {
+        ArrayList<String> list = new ArrayList<>();
+
+        mediator.search("cat",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        mediator.search("dog",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        Assertions.assertEquals(list, mediator.trending(0,5));
+    }
+
+    @Test
+    public void trendingHalfTime() {
+        ArrayList<String> list = new ArrayList<>();
+        list.add("dog");
+        list.add("fish");
+        mediator.search("cat",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        mediator.search("dog",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        Assertions.assertEquals(list, mediator.trending(3,5));
+    }
+
+    @Test
+    public void trendingOneTime() {
+        ArrayList<String> list = new ArrayList<>();
+        list.add("dog");
+        mediator.search("cat",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        mediator.getPage("fish");
+        mediator.search("dog",4);
+        mediator.search("dog",1);
+        Assertions.assertEquals(list, mediator.trending(1,5));
+    }
+
 
 
 
