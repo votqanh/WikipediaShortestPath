@@ -177,7 +177,7 @@ public class WikiMediator {
         try {
              forkJoinPool.submit(() -> firstDepth.parallelStream()
                             .map(title -> BFS(title, pageTitle2, Collections.singletonList(title),
-                                    0)).collect(Collectors.toList()))
+                                    0, 0)).collect(Collectors.toList()))
                             .get(timeout, TimeUnit.SECONDS);
         } catch (TimeoutException | InterruptedException | ExecutionException e) {
             if (limit == 1000) {
@@ -208,8 +208,8 @@ public class WikiMediator {
         return shortestPath;
     }
 
-    private List<String> BFS(String title, String target, List<String> path, int depth) {
-        List<String> links = wiki.getLinksOnPage(title);
+    private List<String> BFS(String start, String target, List<String> path, int depth, int cnt) {
+        List<String> links = wiki.getLinksOnPage(start);
 
         if (depth > limit) {
             return path;
@@ -219,9 +219,29 @@ public class WikiMediator {
             return path;
         }
 
-        for (String l : links) {
-            path.addAll(BFS(l, target, new ArrayList<>(), depth + 1));
+        if (cnt == 0) {
+            int pathBefore = path.size();
+            for (String l : links) {
+                List<String> targetFound = BFS(l, target, new ArrayList<>(), depth + 1, cnt + 1);
+                if (!targetFound.isEmpty()) {
+                    path.add(l);
+                    path.addAll(targetFound);
+                }
+            }
+
+            // if no grandchildren of start is target, make start = each grandchild
+            if (path.size() == pathBefore) {
+                for (String l : links) {
+                    List<String> targetFound = BFS(l, target, new ArrayList<>(), depth + 1, 0);
+                    if (!targetFound.isEmpty()) {
+                        path.add(l);
+                        path.addAll(targetFound);
+                    }
+                }
+            }
         }
+
+        path.add(0, start);
 
         paths.add(path);
         return path;
