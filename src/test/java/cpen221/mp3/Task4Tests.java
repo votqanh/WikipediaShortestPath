@@ -100,4 +100,23 @@ public class Task4Tests {
             System.out.println("InterruptedException");
         }
     }
+
+    // One client sends a shortestPath request to a server.
+    @Test
+    public void singleRequestShortestPath() {
+        try {
+            WikiMediatorServer server = new WikiMediatorServer(PORT, 10, new WikiMediator(24, 120));
+            Thread serverThread = new Thread(new Runnable() {
+                public void run() {
+                    server.serve();
+                }
+            });
+            serverThread.start();
+
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "University of British Columbia", "Santa J. Ono", 100));
+            System.out.println(client.sendRequest());
+        } catch (IOException ioe) {
+            System.out.println("IOException");
+        }
+    }
 }
