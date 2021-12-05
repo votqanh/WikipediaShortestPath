@@ -13,10 +13,20 @@ import java.util.stream.Collectors;
 
 public class WikiMediator {
 
+
     private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
     private final FSFTBuffer<WikiPage> wikiBuffer;
     private final List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
     private final List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
+
+    /* Representation Invariant */
+    // wikiBuffer, requestTracker, and allRequestTracker are not null
+    // wikiBuffer and requestsTracker contain no null elements
+    // allRequestTracker.size() >= requestsTracker.size()
+
+    /* Abstraction Function */
+    // WikiMediator represents a mediator service for Wikipedia which allows users to search, access and
+    // cache Wikipedia's pages, as well as providing metrics for the use of this service.
 
     /**
      * Creates a new WikiMediator instance that is capable of caching Wikipedia pages, with cache specifications
@@ -105,7 +115,7 @@ public class WikiMediator {
     public List<String> trending(int timeLimitInSeconds, int maxItems) {
         long currentTime = System.currentTimeMillis() / 1000;
         ArrayList<Request> filteredRequestTracker = new ArrayList<>();
-        //create a filteredRequestTracker by filtering out all request times that are outside of the time range
+        //create a filteredRequestTracker by filtering out all request times that are outside the time range
         synchronized (requestsTracker) {
             requestsTracker.forEach(request -> {
                 try {
@@ -182,12 +192,13 @@ public class WikiMediator {
     }
 
     /**
-     * Find the shortest and lexicographically smallest path between two Wikipedia pages
-     * Search ends at timeout but the method does not necessarily return at timeout
+     * Find the shortest path between two Wikipedia pages.
+     * If two paths are equally long, the lexicographically smaller one is returned.
+     * Search ends at timeout but the method does not necessarily return at timeout.
      *
      * @param pageTitle1, is not null
      * @param pageTitle2, is not null
-     * @param timeout, is greater than 0
+     * @param timeout in seconds, is greater than 0
      * @return the path including the start and target pages
      * @throws TimeoutException if no path is found
      */
@@ -197,31 +208,47 @@ public class WikiMediator {
             return Arrays.asList(pageTitle1, pageTitle2);
         }
 
-        List<String> firstDepth = wiki.getLinksOnPage(pageTitle1);
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
+        List<String> firstDepth = wiki.getLinksOnPage(pageTitle1);
+        if (firstDepth.contains(pageTitle2)) {
+            return Arrays.asList(pageTitle1, pageTitle2);
+        }
+
         ForkJoinPool forkJoinPool = new ForkJoinPool();
         try {
-             forkJoinPool.submit(() -> firstDepth.parallelStream()
-                            .map(title -> BFS(title, pageTitle2)).collect(Collectors.toList()))
-                            .get(timeout, TimeUnit.SECONDS);
+             forkJoinPool.submit(() -> firstDepth.parallelStream().forEach(title -> BFS(title, pageTitle2)))
+                     .get(timeout, TimeUnit.SECONDS);
         } catch (TimeoutException | InterruptedException | ExecutionException e) {
+            forkJoinPool.shutdownNow();
+
             if (limit == 1000) {
                 throw new TimeoutException();
             }
         }
 
-        realPaths.sort(new ListComparator<>());
+        sortByLengthThenLex();
 
-        List<String> shortestPath = realPaths.get(realPaths.size() - 1);
+        List<String> shortestPath = realPaths.get(0);
         shortestPath.add(0, pageTitle1);
         shortestPath.add(pageTitle2);
 
         return shortestPath;
     }
 
-    private boolean BFS(String start, String target) {
+    private void sortByLengthThenLex() {
+        // sort by length
+        realPaths.sort(Comparator.comparingInt(List::size));
+
+        int size = realPaths.get(0).size();
+        realPaths = realPaths.stream().filter(x -> x.size() == size).collect(Collectors.toList());
+
+        // sort by lexicographic order
+        realPaths.sort(Comparator.comparing(l -> l.get(0)));
+    }
+
+    private void BFS(String start, String target) {
         List<String> children = wiki.getLinksOnPage(start);
         int depth = 0;
 
@@ -229,7 +256,7 @@ public class WikiMediator {
             updateLimit(depth);
             List<String> path =  Arrays.asList(start, target);
             realPaths.add(path);
-            return true;
+            return;
         }
 
         List<List<String>> paths = new ArrayList<>();
@@ -266,29 +293,12 @@ public class WikiMediator {
             paths = new ArrayList<>(tempPaths);
             depth++;
         }
-
-        return true;
     }
 
     private int limit = 1000;
-    private final List<List<String>> realPaths = new ArrayList<>();
+    private List<List<String>> realPaths = new ArrayList<>();
 
     private synchronized void updateLimit(int limit) {
         this.limit = Math.min(limit, this.limit);
     }
-}
-
-class ListComparator<T extends Comparable<T>> implements Comparator<List<T>> {
-
-    @Override
-    public int compare(List<T> o1, List<T> o2) {
-        for (int i = 0; i < Math.min(o1.size(), o2.size()); i++) {
-            int c = o1.get(i).compareTo(o2.get(i));
-            if (c != 0) {
-                return c;
-            }
-        }
-        return Integer.compare(o1.size(), o2.size());
-    }
-
 }
