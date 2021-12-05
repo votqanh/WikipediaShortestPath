@@ -1,7 +1,6 @@
 package cpen221.mp3.wikimediator;
 
 import java.util.ArrayList;
-import java.util.Objects;
 
 public class Request {
     private final String requestString;
@@ -13,7 +12,7 @@ public class Request {
         countList.add(firstTime);
     }
 
-    public Request deepFilteredCopy(long currentTime, long timeWindow) throws NoRecentRequestsException{
+    public Request deepFilteredCopy(long currentTime, long timeWindow) throws NoRecentRequestsException {
 
         long filteredFirstTime = -1;
         for (int i=0;i<this.getCountList().size();i++) {
@@ -30,7 +29,6 @@ public class Request {
         return filteredRequest;
     }
 
-
     public void addInstance(long time) {
         countList.add(time);
     }
@@ -43,19 +41,7 @@ public class Request {
         return (ArrayList<Long>) countList.clone();
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Request request = (Request) o;
-        return Objects.equals(getRequestString(), request.getRequestString());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getRequestString());
-    }
-
+    //just for testing
     @Override
     public String toString() {
         return

@@ -13,27 +13,18 @@ import java.util.stream.Collectors;
 
 public class WikiMediator {
 
-    /* TODO: Implement this datatype
-
-
-        You must implement the methods with the exact signatures
-        as provided in the statement for this mini-project.
-
-        You must add method signatures even for the methods that you
-        do not plan to implement. You should provide skeleton implementation
-        for those methods, and the skeleton implementation could return
-        values like null.
-
-     */
     private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
     private final FSFTBuffer<WikiPage> wikiBuffer;
-    //private final HashMap<String,ArrayList<Long>> requestTracker = new HashMap<>();
-    private final ArrayList<Request> requestsTracker = new ArrayList<>();
-    private final ArrayList<Long> allRequestsTracker = new ArrayList<>();
+    private final List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
+    private final List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
 
     /**
-     * @param capacity
-     * @param stalenessInterval
+     * Creates a new WikiMediator instance that is capable of caching Wikipedia pages, with cache specifications
+     * determined by capacity and stalenessInterval.
+     *
+     * @param capacity the maximum number of Wikipedia pages that can be cached at any given time, must be > 0.
+     * @param stalenessInterval the maximum time, in seconds, that each Wikipedia page remains in the cache before
+     *                          being removed, must be > 0.
      */
     public WikiMediator(int capacity, int stalenessInterval) {
         wikiBuffer = new FSFTBuffer<>(capacity, stalenessInterval);
@@ -43,25 +34,25 @@ public class WikiMediator {
     /**
      * Given a query, return up to limit page titles that match the query string (per Wikipedia's search service).
      *
-     * @param query
-     * @param limit
-     * @return
+     * @param query the String to search Wikipedia for.
+     * @param limit the maximum number of page titles to return, must be > 0.
+     * @return a List with a length of limit containing page titles found by searching Wikipedia for query.
+     * If less than limit pages are found, the length of the List equals the number of pages found.
      */
     public List<String> search(String query, int limit) {
         long currentTime = System.currentTimeMillis() / 1000;
         ArrayList<String> searchResults = wiki.search(query, limit);
-        searchResults.forEach(title -> wikiBuffer.put(new WikiPage(title, wiki.getPageText(title))));
         trackRequest(query, currentTime);
         allRequestsTracker.add(currentTime);
-        System.out.println(requestsTracker);
         return searchResults;
     }
 
     /**
      * Given a pageTitle, return the text associated with the Wikipedia page that matches pageTitle.
      *
-     * @param pageTitle
-     * @return
+     * @param pageTitle the title of a Wikipedia page.
+     * @return the text of the Wikipedia page with the title pageTitle. If no page with the title pageTitle is found,
+     * return an empty String.
      */
     public String getPage(String pageTitle) {
         long currentTime = System.currentTimeMillis() / 1000;
@@ -81,89 +72,109 @@ public class WikiMediator {
     }
 
     /**
-     * Return the most common Strings used in search and getPage requests, with items being sorted in non-increasing count order. When many requests have been made, return only limit items.
+     * Given a limit, return the most common Strings used in search() and getPage() requests,
+     * with items being sorted in non-increasing count order.
+     * When many requests have been made, return only limit items.
      *
-     * @param limit
-     * @return
+     * @param limit the maximum number of Strings in the returned List, must be >= 0.
+     * @return a List containing Strings used in search() and getPage() requests,
+     * with items being sorted by how often they were used in such requests,
+     * in non-increasing count order. The size of the List is at most limit.
      */
     public List<String> zeitgeist(int limit) {
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
-        return requestsTracker.stream().sorted((r1, r2) -> r2.getCountList().size() - r1.getCountList().size())
-                .limit(limit).map(Request::getRequestString).collect(Collectors.toList());
+        //sort requestTracker based on how many times each request was made and map the requests to their String forms
+        synchronized (requestsTracker) {
+            return requestsTracker.stream().sorted((r1, r2) -> r2.getCountList().size() - r1.getCountList().size())
+                    .limit(limit).map(Request::getRequestString).collect(Collectors.toList());
+        }
     }
 
     /**
-     * Similar to zeitgeist(), but returns the most frequent requests made in the last timeLimitInSeconds seconds. This method should report at most maxItems of the most frequent requests.
+     * Similar in function to zeitgeist(), but only considers Strings used in search() and getPage() requests
+     * made in the last timeLimitInSeconds seconds.
      *
-     * @param timeLimitInSeconds
-     * @param maxItems
-     * @return
+     * @param timeLimitInSeconds a number of seconds such that only search() and getPage() requests in the timeframe
+     *                           [currentTime - timeLimitInSeconds, currentTime] are considered, must be >= 0.
+     * @param maxItems the maximum number of Strings in the returned List, must be >= 0.
+     * @return a List containing Strings used in search() and getPage() requests within the last timeLimitInSeconds
+     * seconds, with items being sorted by how often they were used in the last timeLimitInSeconds seconds,
+     * in non-increasing count order. The size of the List is at most maxItems.
      */
     public List<String> trending(int timeLimitInSeconds, int maxItems) {
         long currentTime = System.currentTimeMillis() / 1000;
         ArrayList<Request> filteredRequestTracker = new ArrayList<>();
-        requestsTracker.stream().forEach(request -> {
-            try {
-                filteredRequestTracker.add(request.deepFilteredCopy(currentTime, timeLimitInSeconds));
-            } catch (NoRecentRequestsException ignored) {
-            }
-        });
-
-
+        //create a filteredRequestTracker by filtering out all request times that are outside of the time range
+        synchronized (requestsTracker) {
+            requestsTracker.forEach(request -> {
+                try {
+                    filteredRequestTracker.add(request.deepFilteredCopy(currentTime, timeLimitInSeconds));
+                } catch (NoRecentRequestsException ignored) {}
+            });
+        }
         allRequestsTracker.add(currentTime);
-        return filteredRequestTracker.stream().sorted((r1, r2) -> r2.getCountList().size() - r1.getCountList().size())
-                .limit(maxItems).map(Request::getRequestString).collect(Collectors.toList());
+        synchronized (requestsTracker) {
+            return filteredRequestTracker.stream().sorted((r1, r2) -> r2.getCountList().size() - r1.getCountList().size())
+                    .limit(maxItems).map(Request::getRequestString).collect(Collectors.toList());
+        }
     }
 
     /**
-     * What is the maximum number of requests seen in any time window of a given length? The request count is to include all requests made using the public API of WikiMediator, and therefore counts all five methods listed as basic page requests.
-     * (There is one more request that appears later, shortestPath, and that should also be included if you do implement that method.)
+     * Given certain length of time, return the maximum number of requests made to this
+     * in any time window of the given length, not counting this current request.
      *
-     * @param timeWindowInSeconds
-     * @return
+     * @param timeWindowInSeconds a length of time in seconds, must be >= 0.
+     * @return the maximum number of requests made to this in any time window of timeWindowInSeconds length,
+     * not counting this current request.
      */
     public int windowedPeakLoad(int timeWindowInSeconds) {
         long currentTime = System.currentTimeMillis() / 1000;
         ArrayList<Long> requestsInWindow;
         int peakLoad = 0;
-        for (int i = 0; i < allRequestsTracker.size(); i++) {
-            requestsInWindow = new ArrayList<>();
-            for (int j = i; j < allRequestsTracker.size(); j++) {
-                if (allRequestsTracker.get(j) >= allRequestsTracker.get(i) + timeWindowInSeconds) {
-                    break;
+        //try all possible starting points for the time window to determine peakLoad
+        synchronized (allRequestsTracker) {
+            for (int i = 0; i < allRequestsTracker.size(); i++) {
+                requestsInWindow = new ArrayList<>();
+                for (int j = i; j < allRequestsTracker.size(); j++) {
+                    if (allRequestsTracker.get(j) >= allRequestsTracker.get(i) + timeWindowInSeconds) {
+                        break;
+                    }
+                    requestsInWindow.add(allRequestsTracker.get(j));
                 }
-                requestsInWindow.add(allRequestsTracker.get(j));
+                if (requestsInWindow.size() > peakLoad) {
+                    peakLoad = requestsInWindow.size();
+                }
             }
-            if (requestsInWindow.size() > peakLoad) {
-                peakLoad = requestsInWindow.size();
-            }
-
         }
         allRequestsTracker.add(currentTime);
         return peakLoad;
     }
 
     /**
-     * This is an overloaded version of the previous method where the time window defaults to 30 seconds. (Calls to this method also affect peak load.)
+     * An overloaded version of the previous method where the time window defaults to 30 seconds.
      *
-     * @return
+     * @return the maximum number of requests made to this in any time window of 30 seconds,
+     * not counting this current request.
      */
     public int windowedPeakLoad() {
         return windowedPeakLoad(30);
     }
 
+    /**
+     * A helper method to track Strings used in search() and getPage() requests for use when executing
+     * zeitgeist() and trending().
+     *
+     * @param request the String for which getPage() or search() was called.
+     * @param time the system time at which getPage() or search() was called, in seconds.
+     */
     private void trackRequest(String request, long time) {
-//        if (!requestTracker.containsKey(request)) {
-//            requestTracker.put(request, new ArrayList<>());
-//        }
-//        else {
-//            requestTracker.get(request).add(time);
-//        }
-        for (Request value : requestsTracker) {
-            if (value.getRequestString().equals(request)) {
-                value.addInstance(time);
-                return;
+        synchronized (requestsTracker) {
+            for (Request value : requestsTracker) {
+                if (value.getRequestString().equals(request)) {
+                    value.addInstance(time);
+                    return;
+                }
             }
         }
         requestsTracker.add(new Request(request, time));
@@ -187,6 +198,8 @@ public class WikiMediator {
         }
 
         List<String> firstDepth = wiki.getLinksOnPage(pageTitle1);
+        long currentTime = System.currentTimeMillis() / 1000;
+        allRequestsTracker.add(currentTime);
 
         ForkJoinPool forkJoinPool = new ForkJoinPool();
         try {
