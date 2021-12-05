@@ -191,7 +191,22 @@ public class WikiMediator {
 
     }
 
+    /**
+     * Find the shortest and lexicographically smallest path between two Wikipedia pages
+     * Search ends at timeout but the method does not necessarily return at timeout
+     *
+     * @param pageTitle1, is not null
+     * @param pageTitle2, is not null
+     * @param timeout, is greater than 0
+     * @return the path including the start and target pages
+     * @throws TimeoutException if no path is found
+     */
+
     public List<String> shortestPath(String pageTitle1, String pageTitle2, int timeout) throws TimeoutException {
+        if (Objects.equals(pageTitle1, pageTitle2)) {
+            return Arrays.asList(pageTitle1, pageTitle2);
+        }
+
         List<String> firstDepth = wiki.getLinksOnPage(pageTitle1);
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
@@ -199,8 +214,7 @@ public class WikiMediator {
         ForkJoinPool forkJoinPool = new ForkJoinPool();
         try {
              forkJoinPool.submit(() -> firstDepth.parallelStream()
-                            .map(title -> BFS(title, pageTitle2, Collections.singletonList(title),
-                                    0, 0)).collect(Collectors.toList()))
+                            .map(title -> BFS(title, pageTitle2)).collect(Collectors.toList()))
                             .get(timeout, TimeUnit.SECONDS);
         } catch (TimeoutException | InterruptedException | ExecutionException e) {
             if (limit == 1000) {
@@ -208,70 +222,66 @@ public class WikiMediator {
             }
         }
 
-        List<List<String>> processed_paths = new ArrayList<>();
+        realPaths.sort(new ListComparator<>());
 
-        for (List<String> joined_p : paths) {
-            String start = joined_p.get(0);
-
-            for (int i = 1; i < joined_p.size();) {
-                List<String> p = new ArrayList<>();
-                p.add(start);
-                p.addAll(joined_p.subList(i, joined_p.indexOf(pageTitle2)));
-                processed_paths.add(p);
-                i += p.size() + 1;
-            }
-        }
-
-        processed_paths.sort(new ListComparator<>());
-
-        List<String> shortestPath = processed_paths.get(processed_paths.size() - 1);
+        List<String> shortestPath = realPaths.get(realPaths.size() - 1);
         shortestPath.add(0, pageTitle1);
         shortestPath.add(pageTitle2);
 
         return shortestPath;
     }
 
-    private List<String> BFS(String start, String target, List<String> path, int depth, int cnt) {
-        List<String> links = wiki.getLinksOnPage(start);
+    private boolean BFS(String start, String target) {
+        List<String> children = wiki.getLinksOnPage(start);
+        int depth = 0;
 
-        if (depth > limit) {
-            return path;
-        } else if (links.contains(target)) {
+        if (children.contains(target)) {
             updateLimit(depth);
-            path.add(target);
-            return path;
+            List<String> path =  Arrays.asList(start, target);
+            realPaths.add(path);
+            return true;
         }
 
-        if (cnt == 0) {
-            int pathBefore = path.size();
-            for (String l : links) {
-                List<String> targetFound = BFS(l, target, new ArrayList<>(), depth + 1, cnt + 1);
-                if (!targetFound.isEmpty()) {
-                    path.add(l);
-                    path.addAll(targetFound);
-                }
-            }
+        List<List<String>> paths = new ArrayList<>();
 
-            // if no grandchildren of start is target, make start = each grandchild
-            if (path.size() == pathBefore) {
-                for (String l : links) {
-                    List<String> targetFound = BFS(l, target, new ArrayList<>(), depth + 1, 0);
-                    if (!targetFound.isEmpty()) {
-                        path.add(l);
-                        path.addAll(targetFound);
+        for (String c : children) {
+            List<String> p = Arrays.asList(start, c);
+            paths.add(p);
+        }
+
+        while (depth <= limit) {
+            List<List<String>> tempPaths = new ArrayList<>();
+            boolean found = false;
+
+            for (List<String> p : paths) {
+                List<String> grandchildren = wiki.getLinksOnPage(p.get(p.size() - 1));
+
+                if (grandchildren.contains(target)) {
+                    updateLimit(depth);
+                    p.add(target);
+                    realPaths.add(p);
+                    found = true;
+                    continue;
+                }
+
+                if (!found) {
+                    for (String gc : grandchildren) {
+                        List<String> temp = new ArrayList<>(p);
+                        temp.add(gc);
+                        tempPaths.add(temp);
                     }
                 }
             }
+
+            paths = new ArrayList<>(tempPaths);
+            depth++;
         }
 
-        path.add(0, start);
-
-        paths.add(path);
-        return path;
+        return true;
     }
 
     private int limit = 1000;
-    private final List<List<String>> paths = new ArrayList<>();
+    private final List<List<String>> realPaths = new ArrayList<>();
 
     private synchronized void updateLimit(int limit) {
         this.limit = Math.min(limit, this.limit);

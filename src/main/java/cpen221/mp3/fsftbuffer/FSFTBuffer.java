@@ -38,10 +38,10 @@ public class FSFTBuffer<T extends Bufferable> {
      * timeout period are removed from the cache.
      *
      * @param capacity the number of objects the buffer can hold,
-     *                 must be > 0
+     *                 is greater than 0
      * @param timeout  the duration, in seconds, an object should
      *                 be in the buffer before it times out,
-     *                 must be > 0
+     *                 is greater than 0
      */
     public FSFTBuffer(int capacity, int timeout) {
         this.capacity = capacity;
