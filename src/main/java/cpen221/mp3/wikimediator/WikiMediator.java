@@ -211,7 +211,7 @@ public class WikiMediator {
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
-        List<String> firstDepth = wiki.getLinksOnPage(pageTitle1);
+        List<String> firstDepth = wiki.getLinksOnPage(true, pageTitle1);
         if (firstDepth.contains(pageTitle2)) {
             return Arrays.asList(pageTitle1, pageTitle2);
         }
@@ -249,7 +249,7 @@ public class WikiMediator {
     }
 
     private void BFS(String start, String target) {
-        List<String> children = wiki.getLinksOnPage(start);
+        List<String> children = wiki.getLinksOnPage(true, start);
         int depth = 0;
 
         if (children.contains(target)) {
@@ -271,7 +271,7 @@ public class WikiMediator {
             boolean found = false;
 
             for (List<String> p : paths) {
-                List<String> grandchildren = wiki.getLinksOnPage(p.get(p.size() - 1));
+                List<String> grandchildren = wiki.getLinksOnPage(true, p.get(p.size() - 1));
 
                 if (grandchildren.contains(target)) {
                     updateLimit(depth);
@@ -284,7 +284,9 @@ public class WikiMediator {
                 if (!found) {
                     for (String gc : grandchildren) {
                         List<String> temp = new ArrayList<>(p);
-                        temp.add(gc);
+                        if (!temp.contains(gc)) {
+                            temp.add(gc);
+                        }
                         tempPaths.add(temp);
                     }
                 }
