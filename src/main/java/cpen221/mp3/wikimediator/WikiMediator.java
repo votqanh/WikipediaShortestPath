@@ -105,7 +105,7 @@ public class WikiMediator {
     public List<String> trending(int timeLimitInSeconds, int maxItems) {
         long currentTime = System.currentTimeMillis() / 1000;
         ArrayList<Request> filteredRequestTracker = new ArrayList<>();
-        //create a filteredRequestTracker by filtering out all request times that are outside of the time range
+        //create a filteredRequestTracker by filtering out all request times that are outside the time range
         synchronized (requestsTracker) {
             requestsTracker.forEach(request -> {
                 try {
@@ -182,8 +182,9 @@ public class WikiMediator {
     }
 
     /**
-     * Find the shortest and lexicographically smallest path between two Wikipedia pages
-     * Search ends at timeout but the method does not necessarily return at timeout
+     * Find the shortest path between two Wikipedia pages.
+     * If two paths are equally long, the lexicographically smaller one is returned.
+     * Search ends at timeout but the method does not necessarily return at timeout.
      *
      * @param pageTitle1, is not null
      * @param pageTitle2, is not null
@@ -212,13 +213,24 @@ public class WikiMediator {
             }
         }
 
-        realPaths.sort(new ListComparator<>());
+        sortByLengthThenLex();
 
-        List<String> shortestPath = realPaths.get(realPaths.size() - 1);
+        List<String> shortestPath = realPaths.get(0);
         shortestPath.add(0, pageTitle1);
         shortestPath.add(pageTitle2);
 
         return shortestPath;
+    }
+
+    private void sortByLengthThenLex() {
+        // sort by length
+        realPaths.sort(Comparator.comparingInt(List::size));
+
+        int size = realPaths.get(0).size();
+        realPaths = realPaths.stream().filter(x -> x.size() == size).collect(Collectors.toList());
+
+        // sort by lexicographic order
+        realPaths.sort(Comparator.comparing(l -> l.get(0)));
     }
 
     private boolean BFS(String start, String target) {
@@ -271,24 +283,9 @@ public class WikiMediator {
     }
 
     private int limit = 1000;
-    private final List<List<String>> realPaths = new ArrayList<>();
+    private List<List<String>> realPaths = new ArrayList<>();
 
     private synchronized void updateLimit(int limit) {
         this.limit = Math.min(limit, this.limit);
     }
-}
-
-class ListComparator<T extends Comparable<T>> implements Comparator<List<T>> {
-
-    @Override
-    public int compare(List<T> o1, List<T> o2) {
-        for (int i = 0; i < Math.min(o1.size(), o2.size()); i++) {
-            int c = o1.get(i).compareTo(o2.get(i));
-            if (c != 0) {
-                return c;
-            }
-        }
-        return Integer.compare(o1.size(), o2.size());
-    }
-
 }
