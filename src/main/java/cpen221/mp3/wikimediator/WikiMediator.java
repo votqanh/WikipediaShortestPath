@@ -267,7 +267,7 @@ public class WikiMediator {
         }
 
         while (depth <= limit) {
-            List<List<String>> tempPaths = new ArrayList<>();
+            Set<List<String>> tempPaths = new HashSet<>();
             boolean found = false;
 
             for (List<String> p : paths) {
@@ -281,6 +281,7 @@ public class WikiMediator {
                     continue;
                 }
 
+                // if found, check the rest of the paths at this depth and return
                 if (!found) {
                     for (String gc : grandchildren) {
                         List<String> temp = new ArrayList<>(p);
