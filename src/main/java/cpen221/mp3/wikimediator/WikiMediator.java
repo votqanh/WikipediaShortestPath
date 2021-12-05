@@ -198,7 +198,7 @@ public class WikiMediator {
      *
      * @param pageTitle1, is not null
      * @param pageTitle2, is not null
-     * @param timeout, is greater than 0
+     * @param timeout in seconds, is greater than 0
      * @return the path including the start and target pages
      * @throws TimeoutException if no path is found
      */
@@ -208,16 +208,21 @@ public class WikiMediator {
             return Arrays.asList(pageTitle1, pageTitle2);
         }
 
-        List<String> firstDepth = wiki.getLinksOnPage(pageTitle1);
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
+        List<String> firstDepth = wiki.getLinksOnPage(pageTitle1);
+        if (firstDepth.contains(pageTitle2)) {
+            return Arrays.asList(pageTitle1, pageTitle2);
+        }
+
         ForkJoinPool forkJoinPool = new ForkJoinPool();
         try {
-             forkJoinPool.submit(() -> firstDepth.parallelStream()
-                            .map(title -> BFS(title, pageTitle2)).collect(Collectors.toList()))
-                            .get(timeout, TimeUnit.SECONDS);
+             forkJoinPool.submit(() -> firstDepth.parallelStream().forEach(title -> BFS(title, pageTitle2)))
+                     .get(timeout, TimeUnit.SECONDS);
         } catch (TimeoutException | InterruptedException | ExecutionException e) {
+            forkJoinPool.shutdownNow();
+
             if (limit == 1000) {
                 throw new TimeoutException();
             }
@@ -243,7 +248,7 @@ public class WikiMediator {
         realPaths.sort(Comparator.comparing(l -> l.get(0)));
     }
 
-    private boolean BFS(String start, String target) {
+    private void BFS(String start, String target) {
         List<String> children = wiki.getLinksOnPage(start);
         int depth = 0;
 
@@ -251,7 +256,7 @@ public class WikiMediator {
             updateLimit(depth);
             List<String> path =  Arrays.asList(start, target);
             realPaths.add(path);
-            return true;
+            return;
         }
 
         List<List<String>> paths = new ArrayList<>();
@@ -288,8 +293,6 @@ public class WikiMediator {
             paths = new ArrayList<>(tempPaths);
             depth++;
         }
-
-        return true;
     }
 
     private int limit = 1000;
