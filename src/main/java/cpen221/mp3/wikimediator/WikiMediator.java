@@ -13,10 +13,20 @@ import java.util.stream.Collectors;
 
 public class WikiMediator {
 
+
     private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
     private final FSFTBuffer<WikiPage> wikiBuffer;
     private final List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
     private final List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
+
+    /* Representation Invariant */
+    // wikiBuffer, requestTracker, and allRequestTracker are not null
+    // wikiBuffer and requestsTracker contain no null elements
+    // allRequestTracker.size() >= requestsTracker.size()
+
+    /* Abstraction Function */
+    // WikiMediator represents a mediator service for Wikipedia which allows users to search, access and
+    // cache Wikipedia's pages, as well as providing metrics for the use of this service.
 
     /**
      * Creates a new WikiMediator instance that is capable of caching Wikipedia pages, with cache specifications
