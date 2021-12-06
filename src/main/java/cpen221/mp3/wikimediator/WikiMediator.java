@@ -3,6 +3,7 @@ package cpen221.mp3.wikimediator;
 import cpen221.mp3.fsftbuffer.FSFTBuffer;
 import org.fastily.jwiki.core.Wiki;
 
+import java.sql.Time;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -13,7 +14,7 @@ public class WikiMediator {
     private final List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
     private final List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
 
-    private List<List<String>> realPaths = new ArrayList<>();
+    private final List<List<String>> realPaths = new ArrayList<>();
 
     /* Representation Invariant */
     // wikiBuffer, requestTracker, and allRequestTracker are not null
@@ -214,8 +215,6 @@ public class WikiMediator {
      * @throws TimeoutException if no path is found
      */
     public List<String> shortestPath(String pageTitle1, String pageTitle2, int timeout) throws TimeoutException {
-        //TODO: implement interrupt
-
         if (Objects.equals(pageTitle1, pageTitle2)) {
             return Arrays.asList(pageTitle1, pageTitle2);
         }
@@ -223,59 +222,44 @@ public class WikiMediator {
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
-//        ForkJoinPool forkJoinPool = new ForkJoinPool();
-//        try {
-//            List<String> firstDepth = wiki.getLinksOnPage(true, pageTitle1);
-//            if (firstDepth.contains(pageTitle2)) {
-//                realPaths.add(Arrays.asList(pageTitle1, pageTitle2));
-//                return realPaths.get(0);
-//            }
+        BFS bfs = new BFS(pageTitle1, pageTitle2, realPaths, wiki);
+        Thread t = new Thread(bfs);
+        Timer timer = new Timer();
+        timer.schedule(new Timeout(t, timer), timeout * 1000L);
+        t.start();
 
-             //forkJoinPool.submit(() -> firstDepth.forEach(title -> BFS(title, pageTitle2))).get(timeout, TimeUnit.SECONDS);
+        if (realPaths.isEmpty() || !realPaths.get(0).contains(pageTitle1)) {
+            throw new TimeoutException();
+        }
 
-//        firstDepth.stream().forEach(title -> BFS(title, pageTitle2));
-        BFS(pageTitle1, pageTitle2);
-//        } catch (TimeoutException | InterruptedException | ExecutionException e) {
-//            if (limit == 1000) {
-//                throw new TimeoutException();
-//            }
-//        } finally {
-//            forkJoinPool.shutdownNow();
-//        }
-
-        sortByLengthThenLex();
+        realPaths.sort(Comparator.comparing(l -> l.get(0)));
 
         return realPaths.get(0);
     }
+}
 
-    /**
-     * Sort all paths between two Wikipedia pages
-     * by length then by lexicographic order
-     * in ascending order.
-     */
-    private void sortByLengthThenLex() {
-        // could be shortened to a single stream statement
-        // sort by length
-        realPaths.sort(Comparator.comparingInt(List::size));
+/**
+ * Find all paths between two Wikipedia pages using BFS
+ */
+class BFS implements Runnable {
+    private final String start;
+    private final String target;
+    private List<List<String>> realPaths;
+    private final Wiki wiki;
 
-        int size = realPaths.get(0).size();
-        realPaths = realPaths.stream().filter(x -> x.size() == size).collect(Collectors.toList());
-
-        // sort by lexicographic order
-        realPaths.sort(Comparator.comparing(l -> l.get(0)));
+    public BFS(String start, String target, List<List<String>> realPaths, Wiki wiki) {
+        this.start = start;
+        this.target = target;
+        this.realPaths = realPaths;
+        this.wiki = wiki;
     }
 
-    /**
-     * Find all paths between two Wikipedia pages using BFS
-     *
-     * @param start, is not null
-     * @param target, is not null
-     */
-    private void BFS(String start, String target) {
+    @Override
+    public void run() {
         List<String> children = wiki.getLinksOnPage(true, start);
 
         if (children.contains(target)) {
-            List<String> path =  Arrays.asList(start, target);
+            List<String> path = Arrays.asList(start, target);
             realPaths.add(path);
             return;
         }
@@ -300,7 +284,7 @@ public class WikiMediator {
                 }
 
                 // continue populating graph for backward traversal later
-                else {
+                else if (realPaths.isEmpty()) {
                     graph.get(finalDepth).put(c, grandchildren);
                 }
             });
@@ -323,6 +307,24 @@ public class WikiMediator {
 
                 realPaths = new ArrayList<>(tempPaths);
             }
+        }
+
+    }
+}
+
+class Timeout extends TimerTask {
+    private final Thread t;
+    private final Timer timer;
+
+    public Timeout(Thread t, Timer timer) {
+        this.t = t;
+        this.timer = timer;
+    }
+
+    public void run() {
+        if (t != null && t.isAlive()) {
+            t.interrupt();
+            timer.cancel();
         }
     }
 }
