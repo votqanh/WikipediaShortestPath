@@ -11,7 +11,7 @@ import java.io.IOException;
 public class Task4Tests {
 
     private static final String IP = "127.0.0.1";
-    private static final int PORT = 8080;
+    private static final int PORT = 9012;
 
     // One client sends a request to a server.
     @Test
@@ -113,7 +113,7 @@ public class Task4Tests {
             });
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "University of British Columbia", "kekulis", 10000));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Obama", 500));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
