@@ -211,30 +211,29 @@ public class WikiMediator {
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
-        List<String> firstDepth = wiki.getLinksOnPage(true, pageTitle1);
-        if (firstDepth.contains(pageTitle2)) {
-            return Arrays.asList(pageTitle1, pageTitle2);
-        }
+//        ForkJoinPool forkJoinPool = new ForkJoinPool();
+//        try {
+//            List<String> firstDepth = wiki.getLinksOnPage(true, pageTitle1);
+//            if (firstDepth.contains(pageTitle2)) {
+//                realPaths.add(Arrays.asList(pageTitle1, pageTitle2));
+//                return realPaths.get(0);
+//            }
 
-        ForkJoinPool forkJoinPool = new ForkJoinPool();
-        try {
-             forkJoinPool.submit(() -> firstDepth.parallelStream().forEach(title -> BFS(title, pageTitle2)))
-                     .get(timeout, TimeUnit.SECONDS);
-        } catch (TimeoutException | InterruptedException | ExecutionException e) {
-            forkJoinPool.shutdownNow();
+             //forkJoinPool.submit(() -> firstDepth.forEach(title -> BFS(title, pageTitle2))).get(timeout, TimeUnit.SECONDS);
 
-            if (limit == 1000) {
-                throw new TimeoutException();
-            }
-        }
+//        firstDepth.stream().forEach(title -> BFS(title, pageTitle2));
+        BFS(pageTitle1, pageTitle2);
+//        } catch (TimeoutException | InterruptedException | ExecutionException e) {
+//            if (limit == 1000) {
+//                throw new TimeoutException();
+//            }
+//        } finally {
+//            forkJoinPool.shutdownNow();
+//        }
 
         sortByLengthThenLex();
 
-        List<String> shortestPath = realPaths.get(0);
-        shortestPath.add(0, pageTitle1);
-        shortestPath.add(pageTitle2);
-
-        return shortestPath;
+        return realPaths.get(0);
     }
 
     private void sortByLengthThenLex() {
@@ -267,27 +266,33 @@ public class WikiMediator {
         }
 
         while (depth <= limit) {
-            Set<List<String>> tempPaths = new HashSet<>();
+            List<List<String>> tempPaths = new ArrayList<>();
             boolean found = false;
 
             for (List<String> p : paths) {
                 List<String> grandchildren = wiki.getLinksOnPage(true, p.get(p.size() - 1));
 
+                // if found, check the rest of the paths at this depth and return
                 if (grandchildren.contains(target)) {
                     updateLimit(depth);
                     p.add(target);
                     realPaths.add(p);
                     found = true;
-                    continue;
                 }
+            }
 
-                // if found, check the rest of the paths at this depth and return
-                if (!found) {
-                    for (String gc : grandchildren) {
-                        List<String> temp = new ArrayList<>(p);
-                        if (!temp.contains(gc)) {
-                            temp.add(gc);
-                        }
+            if (found)
+                return;
+
+            for (List<String> p : paths) {
+                List<String> grandchildren = wiki.getLinksOnPage(true, p.get(p.size() - 1));
+                for (String gc : grandchildren) {
+                    List<String> temp = new ArrayList<>(p);
+                    if (!temp.contains(gc)) {
+                        temp.add(gc);
+                    }
+
+                    if (!tempPaths.contains(temp)) {
                         tempPaths.add(temp);
                     }
                 }
