@@ -213,8 +213,9 @@ public class WikiMediator {
      * @return the path including the start and target pages
      * @throws TimeoutException if no path is found
      */
-
     public List<String> shortestPath(String pageTitle1, String pageTitle2, int timeout) throws TimeoutException {
+        //TODO: implement interrupt
+
         if (Objects.equals(pageTitle1, pageTitle2)) {
             return Arrays.asList(pageTitle1, pageTitle2);
         }
@@ -247,6 +248,11 @@ public class WikiMediator {
         return realPaths.get(0);
     }
 
+    /**
+     * Sort all paths between two Wikipedia pages
+     * by length then by lexicographic order
+     * in ascending order.
+     */
     private void sortByLengthThenLex() {
         // could be shortened to a single stream statement
         // sort by length
@@ -259,6 +265,12 @@ public class WikiMediator {
         realPaths.sort(Comparator.comparing(l -> l.get(0)));
     }
 
+    /**
+     * Find all paths between two Wikipedia pages using BFS
+     *
+     * @param start, is not null
+     * @param target, is not null
+     */
     private void BFS(String start, String target) {
         List<String> children = wiki.getLinksOnPage(true, start);
 
