@@ -16,6 +16,16 @@ public class Request {
     // by an ArrayList of system times in seconds.
 
     /**
+     * Private method to check that the representation invariant holds, not present in any of the final
+     * code for performance reasons.
+     */
+    private void checkRep() {
+        assert !requestString.equals(null);
+        assert !countList.equals(null);
+        assert countList.size() >= 1;
+    }
+
+    /**
      * Creates an instance of Request from a String and the first time the String was requested.
      *
      * @param request the String parameter of getPage() or search().

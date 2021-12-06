@@ -29,6 +29,21 @@ public class WikiMediator {
     // cache Wikipedia's pages, as well as providing metrics for the use of this service.
 
     /**
+     * Private method to check that the representation invariant holds, not present in any of the final
+     * code for performance reasons.
+     */
+    private void checkRep() {
+        assert !wikiBuffer.equals(null);
+        assert !requestsTracker.equals(null);
+        assert !allRequestsTracker.equals(null);
+        for (Request r : requestsTracker) {
+            assert !r.equals(null);
+        }
+        assert allRequestsTracker.size() >= requestsTracker.size();
+    }
+
+
+    /**
      * Creates a new WikiMediator instance that is capable of caching Wikipedia pages, with cache specifications
      * determined by capacity and stalenessInterval.
      *
@@ -238,6 +253,7 @@ public class WikiMediator {
     }
 
     private void sortByLengthThenLex() {
+        // could be shortened to a single stream statement
         // sort by length
         realPaths.sort(Comparator.comparingInt(List::size));
 

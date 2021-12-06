@@ -9,10 +9,21 @@ public class WikiPage implements Bufferable {
     /* Representation Invariant */
     // title and text are not null
     // title exists as the actual title of a Wikipedia page
-    // text corresponds to the actual text of the Wikipedia page with the title being title
+    // text corresponds to the actual text of the Wikipedia page with the title of the page being title
 
     /* Abstraction Function */
     // An instance of WikiPage represents a page on Wikipedia.
+
+    /**
+     * Private method to check that the representation invariant holds, not present in any of the final
+     * code for performance reasons.
+     */
+    private void checkRep() {
+        WikiMediator mediator = new WikiMediator(100, 10);
+        assert !title.equals(null);
+        assert !text.equals(null);
+        assert mediator.getPage(title).equals(text);
+    }
 
     /**
      * Creates a WikiPage instance given a title and text.

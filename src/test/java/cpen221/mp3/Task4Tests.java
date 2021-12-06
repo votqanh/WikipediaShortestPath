@@ -113,7 +113,7 @@ public class Task4Tests {
             });
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "University of British Columbia", "Santa J. Ono", 100));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Obama", 500));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
