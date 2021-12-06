@@ -265,7 +265,7 @@ public class WikiMediator {
 
     private void BFS(String start, String target) {
         List<String> children = wiki.getLinksOnPage(true, start);
-        int depth = 0;
+        int depth = 1;
 
         if (children.contains(target)) {
             updateLimit(depth);
@@ -274,48 +274,50 @@ public class WikiMediator {
             return;
         }
 
-        List<List<String>> paths = new ArrayList<>();
+        Map<Integer, Map<String, List<String>>> graph = new LinkedHashMap<>();
 
-        for (String c : children) {
-            List<String> p = Arrays.asList(start, c);
-            paths.add(p);
+        Map<String, List<String>> layer = new LinkedHashMap<>();
+        layer.put(start, children);
+        graph.put(depth, layer);
+
+        while (depth <= limit && realPaths.isEmpty()) {
+            depth++;
+            layer = new LinkedHashMap<>();
+            graph.put(depth, layer);
+
+            int finalDepth = depth;
+            children.parallelStream().forEach(c -> {
+                List<String> grandchildren = wiki.getLinksOnPage(true, c);
+
+                if (!grandchildren.contains(target)) {
+                    graph.get(finalDepth).put(c, grandchildren);
+                }
+
+                else {
+                    List<String> path = Arrays.asList(c, target);
+                    realPaths.add(path);
+                }
+            });
         }
 
-        while (depth <= limit) {
+        updateLimit(depth);
+
+        // traverse graph back to start
+        while (depth >= 1) {
+            depth--;
             List<List<String>> tempPaths = new ArrayList<>();
-            boolean found = false;
+            for (List<String> rp : realPaths) {
+                // for [start, a, b,..., d, e, f, target], get e, then d next iteration, until start
+                List<String> keys = graph.get(depth).entrySet().stream().filter(e -> e.getValue().contains(rp.get(0)))
+                        .map(Map.Entry::getKey).collect(Collectors.toList());
+                keys.parallelStream().forEach(k -> {
+                    List<String> temp = new ArrayList<>(rp);
+                    temp.add(0, k);
+                    tempPaths.add(temp);
+                });
 
-            for (List<String> p : paths) {
-                List<String> grandchildren = wiki.getLinksOnPage(true, p.get(p.size() - 1));
-
-                // if found, check the rest of the paths at this depth and return
-                if (grandchildren.contains(target)) {
-                    updateLimit(depth);
-                    p.add(target);
-                    realPaths.add(p);
-                    found = true;
-                }
+                realPaths = new ArrayList<>(tempPaths);
             }
-
-            if (found)
-                return;
-
-            for (List<String> p : paths) {
-                List<String> grandchildren = wiki.getLinksOnPage(true, p.get(p.size() - 1));
-                for (String gc : grandchildren) {
-                    List<String> temp = new ArrayList<>(p);
-                    if (!temp.contains(gc)) {
-                        temp.add(gc);
-                    }
-
-                    if (!tempPaths.contains(temp)) {
-                        tempPaths.add(temp);
-                    }
-                }
-            }
-
-            paths = new ArrayList<>(tempPaths);
-            depth++;
         }
     }
 
