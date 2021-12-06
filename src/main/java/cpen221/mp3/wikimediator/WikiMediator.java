@@ -4,20 +4,16 @@ import cpen221.mp3.fsftbuffer.FSFTBuffer;
 import org.fastily.jwiki.core.Wiki;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-
 public class WikiMediator {
-
-
     private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
     private final FSFTBuffer<WikiPage> wikiBuffer;
     private final List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
     private final List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
+
+    private List<List<String>> realPaths = new ArrayList<>();
 
     /* Representation Invariant */
     // wikiBuffer, requestTracker, and allRequestTracker are not null
@@ -265,44 +261,41 @@ public class WikiMediator {
 
     private void BFS(String start, String target) {
         List<String> children = wiki.getLinksOnPage(true, start);
-        int depth = 1;
 
         if (children.contains(target)) {
-            updateLimit(depth);
             List<String> path =  Arrays.asList(start, target);
             realPaths.add(path);
             return;
         }
 
+        int depth = 1;
         Map<Integer, Map<String, List<String>>> graph = new LinkedHashMap<>();
 
-        Map<String, List<String>> layer = new LinkedHashMap<>();
-        layer.put(start, children);
-        graph.put(depth, layer);
+        graph.put(depth, new LinkedHashMap<>());
+        graph.get(depth).put(start, children);
 
-        while (depth <= limit && realPaths.isEmpty()) {
+        while (realPaths.isEmpty()) {
             depth++;
-            layer = new LinkedHashMap<>();
-            graph.put(depth, layer);
+            graph.put(depth, new LinkedHashMap<>());
 
             int finalDepth = depth;
             children.parallelStream().forEach(c -> {
                 List<String> grandchildren = wiki.getLinksOnPage(true, c);
 
-                if (!grandchildren.contains(target)) {
-                    graph.get(finalDepth).put(c, grandchildren);
-                }
-
-                else {
+                if (grandchildren.contains(target)) {
                     List<String> path = Arrays.asList(c, target);
                     realPaths.add(path);
+                }
+
+                // continue populating graph for backward traversal later
+                else {
+                    graph.get(finalDepth).put(c, grandchildren);
                 }
             });
         }
 
-        updateLimit(depth);
-
         // traverse graph back to start
+        // saves memory by only copying lists of real paths
         while (depth >= 1) {
             depth--;
             List<List<String>> tempPaths = new ArrayList<>();
@@ -319,12 +312,5 @@ public class WikiMediator {
                 realPaths = new ArrayList<>(tempPaths);
             }
         }
-    }
-
-    private int limit = 1000;
-    private List<List<String>> realPaths = new ArrayList<>();
-
-    private synchronized void updateLimit(int limit) {
-        this.limit = Math.min(limit, this.limit);
     }
 }
