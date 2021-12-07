@@ -13,7 +13,7 @@ import java.util.Arrays;
 public class Task4Tests {
 
     private static final String IP = "127.0.0.1";
-    private static final int PORT = 8080;
+    private static final int PORT = 9999;
 
     // One client sends a request to a server.
     @Test
@@ -95,7 +95,7 @@ public class Task4Tests {
             Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Barack Obama", 5));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Barack Obama", 30));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");

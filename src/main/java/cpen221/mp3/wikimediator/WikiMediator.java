@@ -199,7 +199,6 @@ public class WikiMediator {
             }
         }
         requestsTracker.add(new Request(request, time));
-
     }
 
     /**
@@ -215,18 +214,20 @@ public class WikiMediator {
      * @throws TimeoutException if no path is found
      */
     public List<String> shortestPath(String pageTitle1, String pageTitle2, int timeout) throws TimeoutException {
+        long currentTime = System.currentTimeMillis() / 1000;
+        allRequestsTracker.add(currentTime);
+
         if (Objects.equals(pageTitle1, pageTitle2)) {
             return List.of(pageTitle1);
         }
-
-        long currentTime = System.currentTimeMillis() / 1000;
-        allRequestsTracker.add(currentTime);
 
         BFS search = new BFS(this, pageTitle1, pageTitle2);
         Thread t = new Thread(search);
         Timer timer = new Timer();
         timer.schedule(new Timeout(t, timer), timeout * 1000L);
         t.start();
+
+        while(t.isAlive());
 
         if (path.isEmpty()) {
             throw new TimeoutException();
@@ -235,7 +236,7 @@ public class WikiMediator {
         return path.get(0);
     }
 
-    //TODO: for testing, make method private before submitting
+    //TODO: make method private before submitting
     /**
      * Find all paths between two Wikipedia pages using BFS
      *
@@ -317,7 +318,7 @@ public class WikiMediator {
         }
     }
 
-    // TODO: for testing, remove before submitting
+    // TODO: remove before submitting
     public List<String> getShortest() {
         return new ArrayList<>(path.get(0));
     }
