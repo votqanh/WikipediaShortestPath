@@ -116,6 +116,10 @@ public class WikiMediatorServer {
                             response.response = m.invoke(wikiMediator, request.timeWindowInSeconds);
                         }
                         break;
+                    case "shortestPath":
+                        m = WikiMediator.class.getDeclaredMethod(request.type, String.class, String.class, int.class);
+                        response.response = m.invoke(wikiMediator, request.pageTitle, request.pageTitle2, request.timeout);
+                        break;
                     case "stop":
                         response.status = null; // So that GSON skips this field
                         response.response = "bye";
@@ -138,6 +142,8 @@ public class WikiMediatorServer {
         } catch (InvocationTargetException ite) {
             System.out.println("Invocation target exception: " + request.type);
             out.println("Error");
+        } catch (InterruptedIOException ie) {
+            System.out.println("Timed out");
         }
     }
 
@@ -168,16 +174,15 @@ public class WikiMediatorServer {
             timeout *= 1000;
             while (mainThread.isAlive()) {
                 if (System.currentTimeMillis() - startTime > timeout) {
-                    mainThread.interrupt();
                     in.close();
+                    out.close();
+                    socket.close();
+                    mainThread.interrupt();
                     Response response = new Response();
                     response.id = id;
                     response.status = "failed";
                     response.response = "Operation timed out";
                     out.println(new GsonBuilder().create().toJson(response));
-
-                    out.close();
-                    socket.close();
                     changeNumClients(-1);
                     break;
                 }
