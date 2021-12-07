@@ -13,7 +13,7 @@ public class WikiMediator {
     private final List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
     private final List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
 
-    private List<List<String>> realPaths;
+    private List<List<String>> path;
 
     /* Representation Invariant */
     // wikiBuffer, requestTracker, and allRequestTracker are not null
@@ -228,11 +228,11 @@ public class WikiMediator {
         timer.schedule(new Timeout(t, timer), timeout * 1000L);
         t.start();
 
-        if (realPaths.isEmpty() || !realPaths.get(0).contains(pageTitle1)) {
+        if (path.isEmpty() || !path.get(0).contains(pageTitle1)) {
             throw new TimeoutException();
         }
 
-        return realPaths.get(0);
+        return path.get(0);
     }
 
     //TODO: for testing, make method private before submitting
@@ -243,14 +243,14 @@ public class WikiMediator {
      * @param target the target page
      */
     public void bfs(String start, String target) {
-        realPaths = new ArrayList<>();
+        path = new ArrayList<>();
 
         List<String> children = wiki.getLinksOnPage(true, start);
         Collections.sort(children);
 
         // 1 degree of separation
         if (children.contains(target)) {
-            realPaths.add(Arrays.asList(start, target));
+            path.add(Arrays.asList(start, target));
             return;
         }
 
@@ -260,7 +260,7 @@ public class WikiMediator {
         while (true) {
             for (String c : children) {
                 if (degrees == 2 && linksToTarget.contains(c)) {
-                    realPaths.add(Arrays.asList(start, c, target));
+                    path.add(Arrays.asList(start, c, target));
                     return;
                 }
 
@@ -270,7 +270,7 @@ public class WikiMediator {
 
                     for (String gc : grandchildren) {
                         if (degrees == 3 && linksToTarget.contains(gc)) {
-                            realPaths.add(Arrays.asList(start, c, gc, target));
+                            path.add(Arrays.asList(start, c, gc, target));
                             return;
                         }
 
@@ -280,7 +280,7 @@ public class WikiMediator {
 
                             for (String ggc : greatgrandchildren) {
                                 if (degrees == 4 && linksToTarget.contains(ggc)) {
-                                    realPaths.add(Arrays.asList(start, c, gc, ggc, target));
+                                    path.add(Arrays.asList(start, c, gc, ggc, target));
                                     return;
                                 }
 
@@ -291,7 +291,7 @@ public class WikiMediator {
 
                                     for (String g2gc : g2grandchildren) {
                                         if (degrees == 5 && linksToTarget.contains(g2gc)) {
-                                            realPaths.add(Arrays.asList(start, c, gc, ggc, g2gc, target));
+                                            path.add(Arrays.asList(start, c, gc, ggc, g2gc, target));
                                             return;
                                         }
 
@@ -301,7 +301,7 @@ public class WikiMediator {
 
                                             for (String g3gc : g3grandchildren) {
                                                 if (degrees == 6 && linksToTarget.contains(g3gc)) {
-                                                    realPaths.add(Arrays.asList(start, c, gc, ggc, g2gc, g3gc, target));
+                                                    path.add(Arrays.asList(start, c, gc, ggc, g2gc, g3gc, target));
                                                     return;
                                                 }
                                             }
@@ -319,7 +319,7 @@ public class WikiMediator {
 
     // TODO: for testing, remove before submitting
     public List<String> getShortest() {
-        return new ArrayList<>(realPaths.get(0));
+        return new ArrayList<>(path.get(0));
     }
 }
 
