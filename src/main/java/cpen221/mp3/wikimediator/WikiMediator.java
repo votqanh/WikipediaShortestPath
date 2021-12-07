@@ -222,8 +222,7 @@ public class WikiMediator {
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
-        realPaths = new ArrayList<>();
-        BFS bfs = new BFS(pageTitle1, pageTitle2, realPaths, wiki);
+        BFS bfs = new BFS(this, pageTitle1, pageTitle2);
         Thread t = new Thread(bfs);
         Timer timer = new Timer();
         timer.schedule(new Timeout(t, timer), timeout * 1000L);
@@ -312,6 +311,7 @@ public class WikiMediator {
         }
     }
 
+    // TODO: for testing, remove before submitting
     public List<String> getShortest() {
         return new ArrayList<>(realPaths.get(0));
     }
@@ -323,70 +323,17 @@ public class WikiMediator {
 class BFS implements Runnable {
     private final String start;
     private final String target;
-    private List<List<String>> realPaths;
-    private final Wiki wiki;
+    private final WikiMediator wm;
 
-    public BFS(String start, String target, List<List<String>> realPaths, Wiki wiki) {
+    public BFS(WikiMediator wm, String start, String target) {
         this.start = start;
         this.target = target;
-        this.realPaths = realPaths;
-        this.wiki = wiki;
+        this.wm = wm;
     }
 
     @Override
     public void run() {
-        List<String> children = wiki.getLinksOnPage(true, start);
-
-        if (children.contains(target)) {
-            List<String> path = Arrays.asList(start, target);
-            realPaths.add(path);
-            return;
-        }
-
-        int depth = 1;
-        Map<Integer, Map<String, List<String>>> graph = new LinkedHashMap<>();
-
-        graph.put(depth, new LinkedHashMap<>());
-        graph.get(depth).put(start, children);
-
-        while (realPaths.isEmpty()) {
-            depth++;
-            graph.put(depth, new LinkedHashMap<>());
-
-            int finalDepth = depth;
-            children.parallelStream().forEach(c -> {
-                List<String> grandchildren = wiki.getLinksOnPage(true, c);
-
-                if (grandchildren.contains(target)) {
-                    List<String> path = Arrays.asList(c, target);
-                    realPaths.add(path);
-                }
-
-                // continue populating graph for backward traversal later
-                else if (realPaths.isEmpty()) {
-                    graph.get(finalDepth).put(c, grandchildren);
-                }
-            });
-        }
-
-        // traverse graph back to start
-        // save memory by only copying lists of real paths
-        while (depth >= 1) {
-            depth--;
-            List<List<String>> tempPaths = new ArrayList<>();
-            for (List<String> rp : realPaths) {
-                // for [start, a, b,..., d, e, f, target], get e, then d next iteration, until start
-                List<String> keys = graph.get(depth).entrySet().stream().filter(e -> e.getValue().contains(rp.get(0)))
-                        .map(Map.Entry::getKey).collect(Collectors.toList());
-                keys.parallelStream().forEach(k -> {
-                    List<String> temp = new ArrayList<>(rp);
-                    temp.add(0, k);
-                    tempPaths.add(temp);
-                });
-
-                realPaths = new ArrayList<>(tempPaths);
-            }
-        }
+        wm.BFStest(start, target);
     }
 }
 
