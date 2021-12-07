@@ -3,10 +3,13 @@ package cpen221.mp3.server;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpen221.mp3.wikimediator.WikiMediator;
+import okio.Timeout;
 
 import java.io.*;
 import java.lang.reflect.*;
 import java.net.*;
+import java.sql.Time;
+import java.util.concurrent.TimeoutException;
 
 public class WikiMediatorServer {
 
@@ -81,8 +84,11 @@ public class WikiMediatorServer {
 
         System.out.println("Handling request from id " + request.id);
 
-        Thread timeoutThread = new Thread(new MyRunnable(Thread.currentThread(), socket, in, out, response.id, request.timeout));
-        timeoutThread.start();
+        Thread timeoutThread = new Thread();
+        if (!request.type.equals("shortestPath")) {
+            timeoutThread = new Thread(new MyRunnable(Thread.currentThread(), socket, in, out, response.id, request.timeout));
+            timeoutThread.start();
+        }
 
         try {
             Method m;
@@ -124,9 +130,15 @@ public class WikiMediatorServer {
                         response.status = null; // So that GSON skips this field
                         response.response = "bye";
                         active = false;
+                        break;
+                    default:
+                        response.status = "failed";
+                        response.response = "Unrecognized request method";
                 }
             }
 
+            timeoutThread.interrupt();
+            System.out.println("Main thread has reached the end");
             out.println(gson.toJson(response));
             in.close();
             out.close();
@@ -141,7 +153,15 @@ public class WikiMediatorServer {
             out.println("Error");
         } catch (InvocationTargetException ite) {
             System.out.println("Invocation target exception: " + request.type);
-            out.println("Error");
+            if (ite.getCause() instanceof TimeoutException) {
+                response.status = "failed";
+                response.response = "Operation timed out";
+                out.println(gson.toJson(response));
+                in.close();
+                out.close();
+                socket.close();
+                changeNumClients(-1);
+            }
         } catch (InterruptedIOException ie) {
             System.out.println("Timed out");
         }
@@ -174,16 +194,30 @@ public class WikiMediatorServer {
             timeout *= 1000;
             while (mainThread.isAlive()) {
                 if (System.currentTimeMillis() - startTime > timeout) {
-                    in.close();
-                    out.close();
-                    socket.close();
+                    System.out.println("A");
                     mainThread.interrupt();
+                    System.out.println("B");
+                    in.close();
+                    System.out.println("C");
+
                     Response response = new Response();
+                    System.out.println("D");
                     response.id = id;
+                    System.out.println("E");
                     response.status = "failed";
+                    System.out.println("F");
                     response.response = "Operation timed out";
+                    System.out.println("G");
                     out.println(new GsonBuilder().create().toJson(response));
+                    System.out.println("H");
+
+                    out.close();
+                    System.out.println("I");
+                    socket.close();
+                    System.out.println("J");
                     changeNumClients(-1);
+                    System.out.println("K");
+
                     break;
                 }
             }
