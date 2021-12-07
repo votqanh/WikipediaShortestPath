@@ -29,9 +29,9 @@ check {
     dependsOn jacocoTestCoverageVerification
 }
 
-run {
-    enableAssertions = true
-}
+//run {
+//    enableAssertions = true
+//}
 jacocoTestCoverageVerification {
     violationRules {
         rule {

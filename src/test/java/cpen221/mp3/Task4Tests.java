@@ -4,14 +4,17 @@ import cpen221.mp3.server.Request;
 import cpen221.mp3.server.WikiMediatorClient;
 import cpen221.mp3.server.WikiMediatorServer;
 import cpen221.mp3.wikimediator.WikiMediator;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class Task4Tests {
 
     private static final String IP = "127.0.0.1";
-    private static final int PORT = 9012;
+    private static final int PORT = 8080;
 
     // One client sends a request to a server.
     @Test
@@ -113,10 +116,28 @@ public class Task4Tests {
             });
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Obama", 500));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Barack Obama", 5));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
         }
+    }
+
+    @Test
+    public void testBFS() {
+        WikiMediator wm = new WikiMediator(5, 100);
+        wm.BFStest("Philosophy", "Barack Obama");
+        Assertions.assertEquals(Arrays.asList("Philosophy", "Academic bias", "Barack Obama"), wm.getShortest());
+
+        wm.BFStest("University of British Columbia", "Darfur crisis");
+        Assertions.assertEquals(Arrays.asList("University of British Columbia", "Justin Trudeau", "Darfur crisis"), wm.getShortest());
+
+        wm.BFStest("Alea iacta est", "Malibu, California");
+        Assertions.assertEquals(Arrays.asList("Alea iacta est", "Caesar's Comet", "University of California, Los Angeles", "Malibu, California"), wm.getShortest());
+
+        wm.BFStest("Jacques Cartier", "COVID-19");
+        Assertions.assertEquals(Arrays.asList("Jacques Cartier", "Canada", "COVID-19"), wm.getShortest());
+
+//        System.out.println(wm.getShortest());
     }
 }

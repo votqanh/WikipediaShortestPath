@@ -3,7 +3,6 @@ package cpen221.mp3.wikimediator;
 import cpen221.mp3.fsftbuffer.FSFTBuffer;
 import org.fastily.jwiki.core.Wiki;
 
-import java.sql.Time;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -14,7 +13,7 @@ public class WikiMediator {
     private final List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
     private final List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
 
-    private final List<List<String>> realPaths = new ArrayList<>();
+    private List<List<String>> realPaths;
 
     /* Representation Invariant */
     // wikiBuffer, requestTracker, and allRequestTracker are not null
@@ -208,20 +207,22 @@ public class WikiMediator {
      * If two paths are equally long, the lexicographically smaller one is returned.
      * Search ends at timeout but the method does not necessarily return at timeout.
      *
-     * @param pageTitle1, is not null
-     * @param pageTitle2, is not null
+     * @param pageTitle1 a Wikipedia page title
+     * @param pageTitle2 a Wikipedia page title
      * @param timeout in seconds, is greater than 0
-     * @return the path including the start and target pages
+     * @return the path including {@code pageTitle1} and {@code pageTitle2},
+     *          or {@code pageTitle1} if {@code pageTitle1} and {@code pageTitle2} are the same
      * @throws TimeoutException if no path is found
      */
     public List<String> shortestPath(String pageTitle1, String pageTitle2, int timeout) throws TimeoutException {
         if (Objects.equals(pageTitle1, pageTitle2)) {
-            return Arrays.asList(pageTitle1, pageTitle2);
+            return List.of(pageTitle1);
         }
 
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
+        realPaths = new ArrayList<>();
         BFS bfs = new BFS(pageTitle1, pageTitle2, realPaths, wiki);
         Thread t = new Thread(bfs);
         Timer timer = new Timer();
@@ -232,9 +233,87 @@ public class WikiMediator {
             throw new TimeoutException();
         }
 
-        realPaths.sort(Comparator.comparing(l -> l.get(0)));
-
         return realPaths.get(0);
+    }
+
+    public void BFStest(String start, String target) {
+        realPaths = new ArrayList<>();
+
+        List<String> children = wiki.getLinksOnPage(true, start);
+        Collections.sort(children);
+
+        // 1 degree of separation
+        if (children.contains(target)) {
+            List<String> path = Arrays.asList(start, target);
+            realPaths.add(path);
+            return;
+        }
+
+        List<String> linksToTarget = wiki.whatLinksHere(target);
+        int degrees = 2;
+
+        while (true) {
+            for (String c : children) {
+                if (degrees == 2 && linksToTarget.contains(c)) {
+                    realPaths.add(Arrays.asList(start, c, target));
+                    return;
+                }
+
+                if (degrees >= 3) {
+                    List<String> grandchildren = wiki.getLinksOnPage(true, c);
+                    Collections.sort(grandchildren);
+
+                    for (String gc : grandchildren) {
+                        if (degrees == 3 && linksToTarget.contains(gc)) {
+                            realPaths.add(Arrays.asList(start, c, gc, target));
+                            return;
+                        }
+
+                        if (degrees >= 4) {
+                            List<String> greatgrandchildren = wiki.getLinksOnPage(true, gc);
+                            Collections.sort(greatgrandchildren);
+
+                            for (String ggc : greatgrandchildren) {
+                                if (degrees == 4 && linksToTarget.contains(ggc)) {
+                                    realPaths.add(Arrays.asList(start, c, gc, ggc, target));
+                                    return;
+                                }
+
+                                if (degrees >= 5) {
+                                    //great-great-gc
+                                    List<String> g2grandchildren = wiki.getLinksOnPage(true, ggc);
+                                    Collections.sort(g2grandchildren);
+
+                                    for (String g2gc : g2grandchildren) {
+                                        if (degrees == 5 && linksToTarget.contains(g2gc)) {
+                                            realPaths.add(Arrays.asList(start, c, gc, ggc, g2gc, target));
+                                            return;
+                                        }
+
+                                        if (degrees >= 6) {
+                                            List<String> g3grandchildren = wiki.getLinksOnPage(true, g2gc);
+                                            Collections.sort(g3grandchildren);
+
+                                            for (String g3gc : g3grandchildren) {
+                                                if (degrees == 6 && linksToTarget.contains(g3gc)) {
+                                                    realPaths.add(Arrays.asList(start, c, gc, ggc, g2gc, g3gc, target));
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            degrees++;
+        }
+    }
+
+    public List<String> getShortest() {
+        return new ArrayList<>(realPaths.get(0));
     }
 }
 
@@ -291,7 +370,7 @@ class BFS implements Runnable {
         }
 
         // traverse graph back to start
-        // saves memory by only copying lists of real paths
+        // save memory by only copying lists of real paths
         while (depth >= 1) {
             depth--;
             List<List<String>> tempPaths = new ArrayList<>();
@@ -308,7 +387,6 @@ class BFS implements Runnable {
                 realPaths = new ArrayList<>(tempPaths);
             }
         }
-
     }
 }
 
