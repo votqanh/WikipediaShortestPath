@@ -1,6 +1,7 @@
 package cpen221.mp3;
 
 import cpen221.mp3.wikimediator.WikiMediator;
+import org.fastily.jwiki.core.Wiki;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import java.util.List;
 
 public class Task3Tests {
     private WikiMediator mediator = new WikiMediator(100, 10);
+    private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
 
     public static void delay(int seconds)
     {
@@ -212,6 +214,12 @@ public class Task3Tests {
     @Test
     public void peakLoadNoRequests() {
         Assertions.assertEquals(0, mediator.windowedPeakLoad());
+    }
+
+    @Test
+    public void test() {
+        System.out.println(wiki.getLinksOnPage("Burma"));
+        Assertions.assertEquals(0, 0);
     }
 
 
