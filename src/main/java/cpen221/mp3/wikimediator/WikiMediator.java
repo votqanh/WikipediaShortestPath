@@ -222,8 +222,8 @@ public class WikiMediator {
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
-        BFS bfs = new BFS(this, pageTitle1, pageTitle2);
-        Thread t = new Thread(bfs);
+        BFS search = new BFS(this, pageTitle1, pageTitle2);
+        Thread t = new Thread(search);
         Timer timer = new Timer();
         timer.schedule(new Timeout(t, timer), timeout * 1000L);
         t.start();
@@ -235,7 +235,14 @@ public class WikiMediator {
         return realPaths.get(0);
     }
 
-    public void BFStest(String start, String target) {
+    //TODO: for testing, make method private before submitting
+    /**
+     * Find all paths between two Wikipedia pages using BFS
+     *
+     * @param start the starting page
+     * @param target the target page
+     */
+    public void bfs(String start, String target) {
         realPaths = new ArrayList<>();
 
         List<String> children = wiki.getLinksOnPage(true, start);
@@ -243,8 +250,7 @@ public class WikiMediator {
 
         // 1 degree of separation
         if (children.contains(target)) {
-            List<String> path = Arrays.asList(start, target);
-            realPaths.add(path);
+            realPaths.add(Arrays.asList(start, target));
             return;
         }
 
@@ -317,9 +323,6 @@ public class WikiMediator {
     }
 }
 
-/**
- * Find all paths between two Wikipedia pages using BFS
- */
 class BFS implements Runnable {
     private final String start;
     private final String target;
@@ -333,7 +336,7 @@ class BFS implements Runnable {
 
     @Override
     public void run() {
-        wm.BFStest(start, target);
+        wm.bfs(start, target);
     }
 }
 
