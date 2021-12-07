@@ -169,12 +169,13 @@ public class WikiMediatorServer {
             while (mainThread.isAlive()) {
                 if (System.currentTimeMillis() - startTime > timeout) {
                     mainThread.interrupt();
+                    in.close();
                     Response response = new Response();
                     response.id = id;
                     response.status = "failed";
                     response.response = "Operation timed out";
                     out.println(new GsonBuilder().create().toJson(response));
-                    in.close();
+
                     out.close();
                     socket.close();
                     changeNumClients(-1);
