@@ -228,7 +228,7 @@ public class WikiMediator {
         timer.schedule(new Timeout(t, timer), timeout * 1000L);
         t.start();
 
-        if (path.isEmpty() || !path.get(0).contains(pageTitle1)) {
+        if (path.isEmpty()) {
             throw new TimeoutException();
         }
 

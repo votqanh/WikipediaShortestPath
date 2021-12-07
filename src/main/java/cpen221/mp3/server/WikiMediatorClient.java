@@ -10,15 +10,14 @@ import java.net.*;
 
 public class WikiMediatorClient {
 
-    private final Socket clientSocket;
-    private PrintWriter out;
-    private BufferedReader in;
+    private final PrintWriter out;
+    private final BufferedReader in;
 
-    private Request request;
+    private final Request request;
 
     public WikiMediatorClient(String ip, int port, Request request) throws IOException {
         this.request = request;
-        clientSocket = new Socket(ip, port);
+        Socket clientSocket = new Socket(ip, port);
         out = new PrintWriter(clientSocket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
     }
