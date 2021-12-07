@@ -13,18 +13,14 @@ import java.util.Arrays;
 public class Task4Tests {
 
     private static final String IP = "127.0.0.1";
-    private static final int PORT = 8080;
+    private static final int PORT = 9999;
 
     // One client sends a request to a server.
     @Test
     public void singleRequest() {
         try {
             WikiMediatorServer server = new WikiMediatorServer(PORT, 10, new WikiMediator(24, 120));
-            Thread serverThread = new Thread(new Runnable() {
-                public void run() {
-                    server.serve();
-                }
-            });
+            Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
             WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("one", "Barack Obama", 12, 100));
@@ -39,11 +35,7 @@ public class Task4Tests {
     public void timeout() {
         try {
             WikiMediatorServer server = new WikiMediatorServer(PORT, 10, new WikiMediator(24, 120));
-            Thread serverThread = new Thread(new Runnable() {
-                public void run() {
-                    server.serve();
-                }
-            });
+            Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
             WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("one", "Barack Obama", 50, 1));
@@ -61,31 +53,23 @@ public class Task4Tests {
     public void tripleRequest() {
         try {
             WikiMediatorServer server = new WikiMediatorServer(PORT, 1, new WikiMediator(24, 120));
-            Thread serverThread = new Thread(new Runnable() {
-                public void run() {
-                    server.serve();
-                }
-            });
+            Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
-            Thread t1 = new Thread(new Runnable() {
-                public void run() {
-                    try {
-                        WikiMediatorClient c1 = new WikiMediatorClient(IP, PORT, new Request("1", "Barack Obama", 50, 1));
-                        System.out.println(c1.sendRequest());
-                    } catch (IOException ioe) {
-                        System.out.println("IOException");
-                    }
+            Thread t1 = new Thread(() -> {
+                try {
+                    WikiMediatorClient c1 = new WikiMediatorClient(IP, PORT, new Request("1", "Barack Obama", 50, 1));
+                    System.out.println(c1.sendRequest());
+                } catch (IOException ioe) {
+                    System.out.println("IOException");
                 }
             });
-            Thread t2 = new Thread(new Runnable() {
-                public void run() {
-                    try {
-                        WikiMediatorClient c2 = new WikiMediatorClient(IP, PORT, new Request("2", "Barack Obama", 50, 1));
-                        System.out.println(c2.sendRequest());
-                    } catch (IOException ioe) {
-                        System.out.println("IOException");
-                    }
+            Thread t2 = new Thread(() -> {
+                try {
+                    WikiMediatorClient c2 = new WikiMediatorClient(IP, PORT, new Request("2", "Barack Obama", 50, 1));
+                    System.out.println(c2.sendRequest());
+                } catch (IOException ioe) {
+                    System.out.println("IOException");
                 }
             });
 
@@ -108,14 +92,10 @@ public class Task4Tests {
     public void singleRequestShortestPath() {
         try {
             WikiMediatorServer server = new WikiMediatorServer(PORT, 10, new WikiMediator(24, 120));
-            Thread serverThread = new Thread(new Runnable() {
-                public void run() {
-                    server.serve();
-                }
-            });
+            Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Barack Obama", 5));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Barack Obama", 30));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");

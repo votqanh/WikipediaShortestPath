@@ -5,8 +5,10 @@ import com.google.gson.GsonBuilder;
 import cpen221.mp3.wikimediator.WikiMediator;
 
 import java.io.*;
-import java.lang.reflect.*;
-import java.net.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class WikiMediatorServer {
 
@@ -43,15 +45,13 @@ public class WikiMediatorServer {
 
         while (active) {
 
-            Thread handler = new Thread(new Runnable() {
-                public void run() {
-                    try {
-                        try (Socket socket = serverSocket.accept()) {
-                            handle(socket, changeNumClients(1));
-                        }
-                    } catch (IOException ioe) {
-                        throw new RuntimeException();
+            Thread handler = new Thread(() -> {
+                try {
+                    try (Socket socket = serverSocket.accept()) {
+                        handle(socket, changeNumClients(1));
                     }
+                } catch (IOException ioe) {
+                    throw new RuntimeException();
                 }
             });
 
@@ -174,15 +174,15 @@ public class WikiMediatorServer {
             timeout *= 1000;
             while (mainThread.isAlive()) {
                 if (System.currentTimeMillis() - startTime > timeout) {
-                    in.close();
-                    out.close();
-                    socket.close();
                     mainThread.interrupt();
                     Response response = new Response();
                     response.id = id;
                     response.status = "failed";
                     response.response = "Operation timed out";
                     out.println(new GsonBuilder().create().toJson(response));
+                    out.close();
+                    in.close();
+                    socket.close();
                     changeNumClients(-1);
                     break;
                 }
