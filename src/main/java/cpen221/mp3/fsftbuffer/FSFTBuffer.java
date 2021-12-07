@@ -14,7 +14,7 @@ public class FSFTBuffer<T extends Bufferable> {
         RI:
         - {@code buffer} entries are sorted by the order they were added.
         - {@code bufferIds} contains ids of all objects currently in buffer.
-        - Objects created at the same millisecond are put in the same map entry for ease of removal.
+        - Each object corresponds to 1 map entry.
         - lastAccessed is initially -1 if the object has not been accessed.
      */
 
@@ -106,22 +106,17 @@ public class FSFTBuffer<T extends Bufferable> {
             }
         }
 
-        // if another object is added in the same millisecond
-        for (long time : buffer.keySet()) {
-            if (time == currentTime) {
-                buffer.get(time).put((long) -1, t);
-                currentCapacity++;
-                return true;
-            }
-        }
+        // no need to check if another object is added at the same millisecond (which would overwrite existing entry)
+        // because this method is synchronized and its runtime is definitely over 1 ms.
 
-        //else add object to new time
+        //add object to new time
         newTime(currentTime, t, -1);
         currentCapacity++;
         return true;
     }
 
     private synchronized void newTime(long currentTime, T t, long lastAccessed) {
+        // if t isn't in buffer
         if (!buffer.keySet().stream().map(x -> buffer.get(x).entrySet()).flatMap(Collection::stream)
                 .map(Map.Entry::getValue).collect(Collectors.toList()).contains(t)) {
             LinkedHashMap<Long, T> m = new LinkedHashMap<>();
@@ -158,21 +153,22 @@ public class FSFTBuffer<T extends Bufferable> {
 
         // if object is in the cache, wait until it's been properly added
         if (bufferIds.contains(id)) {
-            while (true) {
-                for (long time : buffer.keySet()) {             // TODO: change to start where we last left off
-                    LinkedHashMap<Long, T> time_object_map = buffer.get(time);
-                    for (long lastAccessed : time_object_map.keySet()) {
-                        T t = time_object_map.get(lastAccessed);
-                        if (Objects.equals(t.id(), id)) {
-                            time_object_map.remove(lastAccessed);
+            while (!buffer.keySet().stream().map(x -> buffer.get(x).entrySet()).flatMap(Collection::stream)
+                    .map(e -> e.getValue().id()).collect(Collectors.toList()).contains(id));
 
-                            if (time_object_map.size() == 0) {
-                                buffer.remove(time);
-                            }
+            for (long time : buffer.keySet()) {
+                LinkedHashMap<Long, T> time_object_map = buffer.get(time);
+                for (long lastAccessed : time_object_map.keySet()) {
+                    T t = time_object_map.get(lastAccessed);
+                    if (Objects.equals(t.id(), id)) {
+                        time_object_map.remove(lastAccessed);
 
-                            newTime(currentTime, t, currentTime);
-                            return t;
+                        if (time_object_map.size() == 0) {
+                            buffer.remove(time);
                         }
+
+                        newTime(currentTime, t, currentTime);
+                        return t;
                     }
                 }
             }
