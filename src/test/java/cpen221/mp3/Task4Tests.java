@@ -4,16 +4,14 @@ import cpen221.mp3.server.Request;
 import cpen221.mp3.server.WikiMediatorClient;
 import cpen221.mp3.server.WikiMediatorServer;
 import cpen221.mp3.wikimediator.WikiMediator;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 public class Task4Tests {
 
     private static final String IP = "127.0.0.1";
-    private static final int PORT = 8080;
+    private static final int PORT = 9012;
 
     // One client sends a request to a server.
     @Test
@@ -47,7 +45,7 @@ public class Task4Tests {
             serverThread.start();
 
             WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("one", "Barack Obama", 500, 1));
-            System.out.println("Response: " + client.sendRequest());
+            System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
         }
@@ -71,7 +69,7 @@ public class Task4Tests {
             Thread t1 = new Thread(new Runnable() {
                 public void run() {
                     try {
-                        WikiMediatorClient c1 = new WikiMediatorClient(IP, PORT, new Request("1", "Barack Obama", 50, 1));
+                        WikiMediatorClient c1 = new WikiMediatorClient(IP, PORT, new Request("1", "Barack Obama", 500, 1));
                         System.out.println(c1.sendRequest());
                     } catch (IOException ioe) {
                         System.out.println("IOException");
@@ -81,7 +79,7 @@ public class Task4Tests {
             Thread t2 = new Thread(new Runnable() {
                 public void run() {
                     try {
-                        WikiMediatorClient c2 = new WikiMediatorClient(IP, PORT, new Request("2", "Barack Obama", 50, 1));
+                        WikiMediatorClient c2 = new WikiMediatorClient(IP, PORT, new Request("2", "Barack Obama", 500, 1));
                         System.out.println(c2.sendRequest());
                     } catch (IOException ioe) {
                         System.out.println("IOException");
@@ -101,43 +99,5 @@ public class Task4Tests {
         } catch (InterruptedException ie) {
             System.out.println("InterruptedException");
         }
-    }
-
-    // One client sends a shortestPath request to a server.
-    @Test
-    public void singleRequestShortestPath() {
-        try {
-            WikiMediatorServer server = new WikiMediatorServer(PORT, 10, new WikiMediator(24, 120));
-            Thread serverThread = new Thread(new Runnable() {
-                public void run() {
-                    server.serve();
-                }
-            });
-            serverThread.start();
-
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Barack Obama", 5));
-            System.out.println(client.sendRequest());
-        } catch (IOException ioe) {
-            System.out.println("IOException");
-        }
-    }
-
-    @Test
-    public void testBFS() {
-        WikiMediator wm = new WikiMediator(5, 100);
-
-        wm.bfs("Philosophy", "Barack Obama");
-        Assertions.assertEquals(Arrays.asList("Philosophy", "Academic bias", "Barack Obama"), wm.getShortest());
-
-        wm.bfs("University of British Columbia", "Darfur crisis");
-        Assertions.assertEquals(Arrays.asList("University of British Columbia", "Justin Trudeau", "Darfur crisis"), wm.getShortest());
-
-        wm.bfs("Alea iacta est", "Malibu, California");
-        Assertions.assertEquals(Arrays.asList("Alea iacta est", "Caesar's Comet", "University of California, Los Angeles", "Malibu, California"), wm.getShortest());
-
-        wm.bfs("Jacques Cartier", "COVID-19");
-        Assertions.assertEquals(Arrays.asList("Jacques Cartier", "Canada", "COVID-19"), wm.getShortest());
-
-//        System.out.println(wm.getShortest());
     }
 }

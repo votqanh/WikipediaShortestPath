@@ -15,8 +15,6 @@ public class Request {
 
     public int timeWindowInSeconds = -1;
 
-    public String pageTitle2;
-
     public int timeout;
 
     public Request(String id, String query, int limit, int timeout) {
@@ -60,14 +58,6 @@ public class Request {
     public Request(String id, int timeout) {
         type = "windowedPeakLoad";
         this.id = id;
-        this.timeout = timeout;
-    }
-
-    public Request(String id, String pageTitle1, String pageTitle2, int timeout) {
-        type = "shortestPath";
-        this.id = id;
-        this.pageTitle = pageTitle1;
-        this.pageTitle2 = pageTitle2;
         this.timeout = timeout;
     }
 }
