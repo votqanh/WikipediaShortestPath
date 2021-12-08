@@ -63,11 +63,13 @@ public class FSFTBuffer<T extends Bufferable> {
      * Add an object to the buffer.
      * If the buffer is full then remove the least recently accessed
      * object to make room for the new object.
-     *
+     * If the buffer is full and no objects in the buffer have been accessed,
+     * the new object is not added.
      *
      * @param t object to be added to the buffer
      * @return true if successful and false if it is
-     *          already in the buffer
+     *          already in the buffer or if the buffer is full
+     *          (in the case where no objects have been accessed)
      */
     public synchronized boolean put(T t) {
         if (bufferIds.contains(t.id()))
@@ -244,4 +246,6 @@ public class FSFTBuffer<T extends Bufferable> {
         this.buffer = state.buffer;
         this.bufferIds = state.bufferIds;
     }
+
+
 }

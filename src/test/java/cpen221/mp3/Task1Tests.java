@@ -5,6 +5,7 @@ import cpen221.mp3.fsftbuffer.FSFTBuffer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
 class T implements Bufferable {
@@ -56,5 +57,30 @@ public class Task1Tests {
         Assertions.assertEquals(a, buffer.get("1"));
         Assertions.assertFalse(buffer.update(b));
         Assertions.assertFalse(buffer.update(c));
+    }
+
+    @Test
+    public void testRemoval() {
+        FSFTBuffer<T> buffer = new FSFTBuffer<>(3, 3);
+
+        T a = new T(1);
+        Assertions.assertTrue(buffer.put(a));
+
+        T b = new T(2);
+        Assertions.assertTrue(buffer.put(b));
+
+        T c = new T(3);
+        Assertions.assertTrue(buffer.put(c));
+
+        Assertions.assertEquals(c, buffer.get("3"));
+        Assertions.assertEquals(b, buffer.get("2"));
+
+        T d = new T(4);
+        Assertions.assertTrue(buffer.put(d));
+
+
+        Assertions.assertFalse(buffer.touch("1"));
+        Assertions.assertThrows(NoSuchElementException.class, () -> buffer.get("1"));
+
     }
 }
