@@ -48,7 +48,6 @@ public class WikiMediatorServer {
         this.wikiMediator = wikiMediator;
         this.maxClients = n;
         serverSocket = new ServerSocket(port);
-        System.out.println("Starting...");
     }
 
     /**
@@ -59,15 +58,12 @@ public class WikiMediatorServer {
     public void serve() {
 
         wikiMediator.loadState();
-        System.out.println("Starting to serve.");
 
         active = true;
         while (active) {
 
-            System.out.println("Looking for a new client");
             try {
                 Socket socket = serverSocket.accept();
-                System.out.println("Client found.");
                 Thread handler = new Thread(() -> {
                     try {
                         handle(socket, changeNumClients(1));
@@ -83,7 +79,6 @@ public class WikiMediatorServer {
 
         try {
             serverSocket.close();
-            System.out.println("Server closed");
         } catch (IOException ioe) {
             System.out.println("IOException in closing server");
         }
@@ -108,8 +103,6 @@ public class WikiMediatorServer {
         Response response = new Response();
         response.id = request.id;
         response.status = overflow ? "failed" : "success";
-
-        System.out.println("Handling request from id " + request.id);
 
         if (!request.type.equals("stop")) {
             Thread timeoutThread = new Thread(new MyRunnable(Thread.currentThread(), socket, in, out, response.id, request.timeout));
@@ -163,15 +156,16 @@ public class WikiMediatorServer {
                         out.close();
                         socket.close();
                         serverSocket.close();
-                        Thread.currentThread().interrupt();
                 }
             }
 
-            changeNumClients(-1);
-            out.println(gson.toJson(response));
-            in.close();
-            out.close();
-            socket.close();
+            if (!request.type.equals("stop")) {
+                changeNumClients(-1);
+                out.println(gson.toJson(response));
+                in.close();
+                out.close();
+                socket.close();
+            }
 
         } catch (NoSuchMethodException nsme) {
             System.out.println("Invalid method requested: " + request.type);
@@ -253,7 +247,6 @@ public class WikiMediatorServer {
     private synchronized boolean changeNumClients(int amount) {
         numClients += amount;
         boolean overflow = numClients > maxClients;
-        System.out.println("Number of clients has " + ((amount > 0) ? "increased" : "decreased") + " to " + numClients + ". Overflow: " + overflow);
         return overflow;
     }
 }

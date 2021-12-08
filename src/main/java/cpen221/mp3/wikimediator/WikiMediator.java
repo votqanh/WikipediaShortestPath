@@ -89,7 +89,6 @@ public class WikiMediator {
         }
         trackRequest(pageTitle, currentTime);
         allRequestsTracker.add(currentTime);
-        System.out.println(requestsTracker);
         return text;
     }
 
@@ -277,9 +276,8 @@ public class WikiMediator {
                 requestsTracker = state.requestsTracker;
                 allRequestsTracker = state.allRequestsTracker;
             }
-            System.out.println("Load state found!");
         } catch (FileNotFoundException fnfe) {
-            System.out.println("Load state not found, starting fresh.");
+            // File doesn't exist (this is fine)
         }
     }
 
