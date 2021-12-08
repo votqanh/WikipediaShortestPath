@@ -48,17 +48,31 @@ public class WikiMediatorServer {
         while (active) {
 
             System.out.println("Looking for a new client");
-            Thread handler = new Thread(() -> {
-                try {
-                    try (Socket socket = serverSocket.accept()) {
+            try {
+                Socket socket = serverSocket.accept();
+                System.out.println("Client found.");
+                Thread handler = new Thread(() -> {
+                    try {
                         handle(socket, changeNumClients(1));
+                    } catch (IOException ioe) {
+                        throw new RuntimeException();
                     }
-                } catch (IOException ioe) {
-                    throw new RuntimeException();
-                }
-            });
-
-            handler.start();
+                });
+                handler.start();
+            } catch (IOException ioe) {
+                throw new RuntimeException();
+            }
+//            Thread handler = new Thread(() -> {
+//                try {
+//                    try (Socket socket = serverSocket.accept()) {
+//                        handle(socket, changeNumClients(1));
+//                    }
+//                } catch (IOException ioe) {
+//                    throw new RuntimeException();
+//                }
+//            });
+//
+//            handler.start();
         }
 
         try {
@@ -137,6 +151,13 @@ public class WikiMediatorServer {
                         wikiMediator.saveState();
                         response.status = null; // So that GSON skips this field
                         response.response = "bye";
+                        changeNumClients(-1);
+                        out.println(gson.toJson(response));
+                        in.close();
+                        out.close();
+                        socket.close();
+                        serverSocket.close();
+                        Thread.currentThread().interrupt();
                 }
             }
 
