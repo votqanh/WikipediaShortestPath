@@ -1,0 +1,4 @@
+- made tests for task 2
+- implemented task 4 (WikiMediatorServer, WikiMediatorClient, Task4Tests, ClientRequest, Response)
+- implemented saveState and loadState in WikiMediator
+- helped develop task 5 basic algorithm
