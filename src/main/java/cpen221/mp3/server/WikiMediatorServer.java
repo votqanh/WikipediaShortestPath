@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpen221.mp3.wikimediator.WikiMediator;
 
+import java.util.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -12,10 +13,11 @@ import java.net.Socket;
 
 public class WikiMediatorServer {
 
-    private final ServerSocket serverSocket;
+    private ServerSocket serverSocket;
     private final WikiMediator wikiMediator;
+    private final int port;
 
-    private boolean active = true;
+    private boolean active;
     private int numClients = 0;
     private final int maxClients;
 
@@ -28,12 +30,11 @@ public class WikiMediatorServer {
      * @param wikiMediator the WikiMediator instance to use for the server, {@code wikiMediator} is not {@code null}
      */
     public WikiMediatorServer(int port, int n, WikiMediator wikiMediator) throws IOException {
-
-        System.out.println("Starting...");
-        this.maxClients = n;
         this.wikiMediator = wikiMediator;
+        this.maxClients = n;
+        this.port = port;
         serverSocket = new ServerSocket(port);
-        System.out.println("Server created");
+        System.out.println("Starting...");
     }
 
     /**
@@ -43,8 +44,13 @@ public class WikiMediatorServer {
 
     public void serve() {
 
+        wikiMediator.loadState();
+        System.out.println("Starting to serve.");
+
+        active = true;
         while (active) {
 
+            System.out.println("Looking for a new client");
             Thread handler = new Thread(() -> {
                 try {
                     try (Socket socket = serverSocket.accept()) {
@@ -56,6 +62,13 @@ public class WikiMediatorServer {
             });
 
             handler.start();
+        }
+
+        try {
+            serverSocket.close();
+            System.out.println("Server closed");
+        } catch (IOException ioe) {
+            System.out.println("IOException in closing server");
         }
     }
 
@@ -73,7 +86,7 @@ public class WikiMediatorServer {
 
         String input = in.readLine();
         Gson gson = new GsonBuilder().create();
-        Request request = gson.fromJson(input, Request.class);
+        ClientRequest request = gson.fromJson(input, ClientRequest.class);
 
         Response response = new Response();
         response.id = request.id;
@@ -81,8 +94,10 @@ public class WikiMediatorServer {
 
         System.out.println("Handling request from id " + request.id);
 
-        Thread timeoutThread = new Thread(new MyRunnable(Thread.currentThread(), socket, in, out, response.id, request.timeout));
-        timeoutThread.start();
+        if (!request.type.equals("stop")) {
+            Thread timeoutThread = new Thread(new MyRunnable(Thread.currentThread(), socket, in, out, response.id, request.timeout));
+            timeoutThread.start();
+        }
 
         try {
             Method m;
@@ -121,17 +136,18 @@ public class WikiMediatorServer {
                         response.response = m.invoke(wikiMediator, request.pageTitle, request.pageTitle2, request.timeout);
                         break;
                     case "stop":
+                        active = false;
+                        wikiMediator.saveState();
                         response.status = null; // So that GSON skips this field
                         response.response = "bye";
-                        active = false;
                 }
             }
 
+            changeNumClients(-1);
             out.println(gson.toJson(response));
             in.close();
             out.close();
             socket.close();
-            changeNumClients(-1);
 
         } catch (NoSuchMethodException nsme) {
             System.out.println("Invalid method requested: " + request.type);

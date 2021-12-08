@@ -218,7 +218,7 @@ public class Task3Tests {
 
     @Test
     public void test() {
-        System.out.println(wiki.getLinksOnPage("Burma"));
+        System.out.println(wiki.getPageText("Myanmar"));
         Assertions.assertEquals(0, 0);
     }
 

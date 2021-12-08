@@ -13,9 +13,9 @@ public class WikiMediatorClient {
     private final PrintWriter out;
     private final BufferedReader in;
 
-    private final Request request;
+    private final ClientRequest request;
 
-    public WikiMediatorClient(String ip, int port, Request request) throws IOException {
+    public WikiMediatorClient(String ip, int port, ClientRequest request) throws IOException {
         this.request = request;
         Socket clientSocket = new Socket(ip, port);
         out = new PrintWriter(clientSocket.getOutputStream(), true);

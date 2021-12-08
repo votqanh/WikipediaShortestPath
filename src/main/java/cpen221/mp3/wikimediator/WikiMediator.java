@@ -1,17 +1,20 @@
 package cpen221.mp3.wikimediator;
 
 import cpen221.mp3.fsftbuffer.FSFTBuffer;
+import cpen221.mp3.server.WikiMediatorState;
 import org.fastily.jwiki.core.Wiki;
 
 import java.util.*;
+import java.io.*;
+import com.google.gson.*;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class WikiMediator {
     private final Wiki wiki = new Wiki.Builder().withDomain("en.wikipedia.org").build();
-    private final FSFTBuffer<WikiPage> wikiBuffer;
-    private final List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
-    private final List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
+    private FSFTBuffer<WikiPage> wikiBuffer;
+    private List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
+    private List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
 
     private List<List<String>> path;
 
@@ -318,10 +321,53 @@ public class WikiMediator {
         }
     }
 
+    public void saveState() {
+        try {
+            File stateFile = new File("local/state.txt");
+            if (stateFile.createNewFile()) {
+                Gson gson = new GsonBuilder().create();
+                FileWriter writer = new FileWriter(stateFile);
+                writer.write(gson.toJson(new WikiMediatorState(this)));
+                writer.close();
+            } else {
+                // File already exists
+            }
+        } catch (IOException ioe) {
+            System.out.println("IOException in creating state");
+        }
+    }
+
+    public void loadState() {
+        try {
+            File stateFile = new File("local/state.txt");
+            Scanner scanner = new Scanner(stateFile);
+            while (scanner.hasNextLine()) {
+                Gson gson = new GsonBuilder().create();
+                String line = scanner.nextLine();
+                WikiMediatorState state = gson.fromJson(line, WikiMediatorState.class);
+                wikiBuffer = new FSFTBuffer<>();
+                wikiBuffer.loadState(state);
+                requestsTracker = state.requestsTracker;
+                allRequestsTracker = state.allRequestsTracker;
+            }
+            System.out.println("Load state found!");
+        } catch (FileNotFoundException fnfe) {
+            System.out.println("Load state not found, starting fresh.");
+        }
+    }
+
     // TODO: remove before submitting
     public List<String> getShortest() {
         return new ArrayList<>(path.get(0));
     }
+
+    /**
+     * Below is a collection of observer methods that allow the construction of WikiMediatorState,
+     * and a method that uses a WikiMediatorState to load a state.
+     */
+    public FSFTBuffer getFSFTBuffer() { return wikiBuffer; }
+    public List getRequestsTracker() { return requestsTracker; }
+    public List getAllRequestTracker() { return allRequestsTracker; }
 }
 
 class BFS implements Runnable {

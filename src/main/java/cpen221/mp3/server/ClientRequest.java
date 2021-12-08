@@ -1,6 +1,8 @@
 package cpen221.mp3.server;
 
-public class Request {
+import java.util.Objects;
+
+public class ClientRequest {
 
     public String id;
     public String type;
@@ -9,17 +11,16 @@ public class Request {
     public int limit; // Used in 2 methods
 
     public String pageTitle;
+    public String pageTitle2;
 
     public int timeLimitInSeconds;
     public int maxItems;
 
     public int timeWindowInSeconds = -1;
 
-    public String pageTitle2;
-
     public int timeout;
 
-    public Request(String id, String query, int limit, int timeout) {
+    public ClientRequest(String id, String query, int limit, int timeout) {
         type = "search";
         this.id = id;
         this.query = query;
@@ -27,7 +28,7 @@ public class Request {
         this.timeout = timeout;
     }
 
-    public Request(String id, String pageTitle, int timeout) {
+    public ClientRequest(String id, String pageTitle, int timeout) {
         type = "getPage";
         this.id = id;
         this.pageTitle = pageTitle;
@@ -35,7 +36,7 @@ public class Request {
     }
 
     // Since there are two methods with one int parameter, we need to distinguish them
-    public Request(String id, int num, boolean isZeitgeist, int timeout) {
+    public ClientRequest(String id, int num, boolean isZeitgeist, int timeout) {
         if (isZeitgeist) {
             type = "zeitgeist";
             this.id = id;
@@ -49,7 +50,7 @@ public class Request {
         }
     }
 
-    public Request(String id, int timeLimitInSeconds, int maxItems, int timeout) {
+    public ClientRequest(String id, int timeLimitInSeconds, int maxItems, int timeout) {
         type = "trending";
         this.id = id;
         this.timeLimitInSeconds = timeLimitInSeconds;
@@ -57,17 +58,24 @@ public class Request {
         this.timeout = timeout;
     }
 
-    public Request(String id, int timeout) {
+    public ClientRequest(String id, int timeout) {
         type = "windowedPeakLoad";
         this.id = id;
         this.timeout = timeout;
     }
 
-    public Request(String id, String pageTitle1, String pageTitle2, int timeout) {
+    public ClientRequest(String id, String pageTitle1, String pageTitle2, int timeout) {
         type = "shortestPath";
         this.id = id;
         this.pageTitle = pageTitle1;
         this.pageTitle2 = pageTitle2;
         this.timeout = timeout;
+    }
+
+    public ClientRequest(String id, String type) {
+        this.id = id;
+        if (Objects.equals(type, "stop")) {
+            this.type = "stop";
+        }
     }
 }

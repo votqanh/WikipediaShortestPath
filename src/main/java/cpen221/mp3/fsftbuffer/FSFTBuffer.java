@@ -1,4 +1,7 @@
 package cpen221.mp3.fsftbuffer;
+
+import cpen221.mp3.server.WikiMediatorState;
+
 import java.lang.System;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,12 +28,12 @@ public class FSFTBuffer<T extends Bufferable> {
     /* the default timeout value is 3600s */
     public static final int DTIMEOUT = 3600;
 
-    private final int capacity;
-    private final int timeout;
+    private int capacity;
+    private int timeout;
     private int currentCapacity;
 
-    private final Map<Long, LinkedHashMap<Long, T>> buffer = new LinkedHashMap<>();
-    private final List<String> bufferIds = new ArrayList<>();
+    private Map<Long, LinkedHashMap<Long, T>> buffer = new LinkedHashMap<>();
+    private List<String> bufferIds = new ArrayList<>();
 
     /**
      * Create a buffer with a fixed capacity and a timeout value.
@@ -222,5 +225,23 @@ public class FSFTBuffer<T extends Bufferable> {
      */
     public boolean update(T t) {
         return touch(t.id());
+    }
+
+    /**
+     * Below is a collection of observer methods that allow the creation of FSFTState object,
+     * and a mutator method that loads the state of a past Buffer for use in servers.
+     */
+    public int getCapacity() { return capacity; }
+    public int getTimeout() { return timeout; }
+    public int getCurrentCapacity() { return currentCapacity; }
+    public Map getBuffer() { return new HashMap(buffer); }
+    public List getBufferIds() { return new ArrayList(bufferIds); }
+
+    public void loadState(WikiMediatorState state) {
+        this.capacity = state.capacity;
+        this.timeout = state.timeout;
+        this.currentCapacity = state.currentCapacity;
+        this.buffer = state.buffer;
+        this.bufferIds = state.bufferIds;
     }
 }
