@@ -1,12 +1,14 @@
 package cpen221.mp3;
 
-import cpen221.mp3.server.Request;
+import cpen221.mp3.server.ClientRequest;
 import cpen221.mp3.server.WikiMediatorClient;
 import cpen221.mp3.server.WikiMediatorServer;
+import cpen221.mp3.server.WikiMediatorState;
 import cpen221.mp3.wikimediator.WikiMediator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -23,7 +25,7 @@ public class Task4Tests {
             Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("one", "Barack Obama", 12, 100));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new ClientRequest("one", "Barack Obama", 12, 100));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
@@ -38,7 +40,7 @@ public class Task4Tests {
             Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("one", "Barack Obama", 50, 1));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new ClientRequest("one", "Barack Obama", 500, 1));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
@@ -58,7 +60,7 @@ public class Task4Tests {
 
             Thread t1 = new Thread(() -> {
                 try {
-                    WikiMediatorClient c1 = new WikiMediatorClient(IP, PORT, new Request("1", "Barack Obama", 50, 1));
+                    WikiMediatorClient c1 = new WikiMediatorClient(IP, PORT, new ClientRequest("1", "Barack Obama", 50, 1));
                     System.out.println(c1.sendRequest());
                 } catch (IOException ioe) {
                     System.out.println("IOException");
@@ -66,7 +68,7 @@ public class Task4Tests {
             });
             Thread t2 = new Thread(() -> {
                 try {
-                    WikiMediatorClient c2 = new WikiMediatorClient(IP, PORT, new Request("2", "Barack Obama", 50, 1));
+                    WikiMediatorClient c2 = new WikiMediatorClient(IP, PORT, new ClientRequest("2", "Barack Obama", 50, 1));
                     System.out.println(c2.sendRequest());
                 } catch (IOException ioe) {
                     System.out.println("IOException");
@@ -78,7 +80,7 @@ public class Task4Tests {
             t1.join();
             t2.join();
 
-            WikiMediatorClient c3 = new WikiMediatorClient(IP, PORT, new Request("3", "Barack Obama", 5, 100));
+            WikiMediatorClient c3 = new WikiMediatorClient(IP, PORT, new ClientRequest("3", "Barack Obama", 5, 100));
             System.out.println(c3.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
@@ -95,10 +97,60 @@ public class Task4Tests {
             Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "String Theory", "Apple Sauce", 500));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new ClientRequest("1", "Philosophy", "Barack Obama", 30));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
+        }
+    }
+
+    // This test tests the save/load state functionality of the WikiMediator server and the zeitgeist function.
+    // - Client 1 sends a search request for "Trampoline"
+    // - Clients 2, 3 and 4 send search requests for "Trampolining"
+    // - Clients 5 and 6 send search requests for "Springfree Trampoline"
+    // - Client 7 sends a stop signal
+    // - Server saves state and shuts down
+    // - Server starts itself up again and loads state
+    // - Client 8 sends a zeitgeist request, receiving ["Trampoline", "Springfree Trampoline", "Trampolining"]
+
+    @Test
+    public void saveLoadState() {
+        try {
+            new File("local/state.txt").delete();
+
+            WikiMediatorServer server = new WikiMediatorServer(PORT, 1, new WikiMediator(24, 120));
+            Thread serverThread = new Thread(server::serve);
+            serverThread.start();
+
+            WikiMediatorClient c1 = new WikiMediatorClient(IP, PORT, new ClientRequest("1", "Trampoline", 5, 100));
+            System.out.println(c1.sendRequest());
+
+            WikiMediatorClient c2 = new WikiMediatorClient(IP, PORT, new ClientRequest("2", "Trampolining", 5, 100));
+            System.out.println(c2.sendRequest());
+
+            WikiMediatorClient c3 = new WikiMediatorClient(IP, PORT, new ClientRequest("3", "Trampolining", 5, 100));
+            System.out.println(c3.sendRequest());
+
+            WikiMediatorClient c4 = new WikiMediatorClient(IP, PORT, new ClientRequest("4", "Trampolining", 5, 100));
+            System.out.println(c4.sendRequest());
+
+            WikiMediatorClient c5 = new WikiMediatorClient(IP, PORT, new ClientRequest("5", "Springfree Trampoline", 5, 100));
+            System.out.println(c5.sendRequest());
+
+            WikiMediatorClient c6 = new WikiMediatorClient(IP, PORT, new ClientRequest("6", "Springfree Trampoline", 5, 100));
+            System.out.println(c6.sendRequest());
+
+            WikiMediatorClient c7 = new WikiMediatorClient(IP, PORT, new ClientRequest("7", "stop"));
+            System.out.println(c7.sendRequest());
+
+            WikiMediatorServer server2 = new WikiMediatorServer(PORT, 1, new WikiMediator(0, 0));
+            Thread serverThread2 = new Thread(server2::serve);
+            serverThread2.start();
+
+            WikiMediatorClient c8 = new WikiMediatorClient(IP, PORT, new ClientRequest("8", 4, true, 100));
+            System.out.println(c8.sendRequest());
+        } catch (IOException ioe) {
+            System.out.println("IOException in test");
         }
     }
 
