@@ -95,7 +95,7 @@ public class Task4Tests {
             Thread serverThread = new Thread(server::serve);
             serverThread.start();
 
-            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "Philosophy", "Barack Obama", 30));
+            WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new Request("1", "String Theory", "Apple Sauce", 500));
             System.out.println(client.sendRequest());
         } catch (IOException ioe) {
             System.out.println("IOException");
