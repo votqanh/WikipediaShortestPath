@@ -4,6 +4,7 @@ import cpen221.mp3.server.WikiMediatorState;
 
 import java.lang.System;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class FSFTBuffer<T extends Bufferable> {
@@ -15,7 +16,6 @@ public class FSFTBuffer<T extends Bufferable> {
         - An object cannot be added to the buffer if it is already in the buffer.
 
         RI:
-        - {@code buffer} entries are sorted by the order they were added.
         - {@code bufferIds} contains ids of all objects currently in buffer.
         - Each object corresponds to 1 map entry.
         - lastAccessed is initially -1 if the object has not been accessed.
@@ -96,25 +96,32 @@ public class FSFTBuffer<T extends Bufferable> {
             outer:
             for (long time : buffer.keySet()) {
                 LinkedHashMap<Long, T> time_object_map = buffer.get(time);
+
                 for (long lastAccessed : time_object_map.keySet()) {
                     if (lastAccessed == leastRecent) {
+                        bufferIds.remove(time_object_map.get(lastAccessed).id());
                         time_object_map.remove(lastAccessed);
                         currentCapacity--;
-                    }
 
-                    if (time_object_map.size() == 0) {
-                        buffer.remove(time);
-                    }
+                        if (time_object_map.size() == 0) {
+                            buffer.remove(time);
+                        }
 
-                    break outer;
+                        break outer;
+                    }
                 }
             }
         }
 
         // no need to check if another object is added at the same millisecond (which would overwrite existing entry)
         // because this method is synchronized and its runtime is definitely over 1 ms.
+        try {
+            TimeUnit.MILLISECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            return false;
+        }
 
-        //add object to new time
+        // add object to new time
         newTime(currentTime, t, -1);
         currentCapacity++;
         return true;
@@ -131,17 +138,14 @@ public class FSFTBuffer<T extends Bufferable> {
     }
 
     private void removeStale(long currentTime) {
-        Set<Long> times = new HashSet<>(buffer.keySet());
-
-        for (long time : times) {
+        buffer.keySet().parallelStream().forEach(time -> {
             if (currentTime >= time + timeout * 1000L) {
                 LinkedHashMap<Long, T> time_object_map = buffer.get(time);
                 buffer.remove(time);
-                bufferIds.removeAll(time_object_map.keySet().stream().map(x -> time_object_map.get(x).id())
-                        .collect(Collectors.toList()));
-                currentCapacity -= time_object_map.size();
+                bufferIds.remove(time_object_map.entrySet().iterator().next().getValue().id());
+                currentCapacity--;
             }
-        }
+        });
     }
 
     /**
@@ -162,6 +166,7 @@ public class FSFTBuffer<T extends Bufferable> {
 
             for (long time : buffer.keySet()) {
                 LinkedHashMap<Long, T> time_object_map = buffer.get(time);
+
                 for (long lastAccessed : time_object_map.keySet()) {
                     T t = time_object_map.get(lastAccessed);
                     if (Objects.equals(t.id(), id)) {
@@ -246,6 +251,4 @@ public class FSFTBuffer<T extends Bufferable> {
         this.buffer = state.buffer;
         this.bufferIds = state.bufferIds;
     }
-
-
 }

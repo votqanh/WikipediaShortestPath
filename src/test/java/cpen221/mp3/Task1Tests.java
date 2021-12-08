@@ -78,9 +78,8 @@ public class Task1Tests {
         T d = new T(4);
         Assertions.assertTrue(buffer.put(d));
 
-
-        Assertions.assertFalse(buffer.touch("1"));
-        Assertions.assertThrows(NoSuchElementException.class, () -> buffer.get("1"));
+        Assertions.assertFalse(buffer.touch("3"));
+        Assertions.assertThrows(NoSuchElementException.class, () -> buffer.get("3"));
 
     }
 }
