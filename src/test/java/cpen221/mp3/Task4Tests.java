@@ -3,19 +3,16 @@ package cpen221.mp3;
 import cpen221.mp3.server.ClientRequest;
 import cpen221.mp3.server.WikiMediatorClient;
 import cpen221.mp3.server.WikiMediatorServer;
-import cpen221.mp3.server.WikiMediatorState;
 import cpen221.mp3.wikimediator.WikiMediator;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 
 public class Task4Tests {
 
     private static final String IP = "127.0.0.1";
-    private static final int PORT = 9999;
+    private static final int PORT = 9997;
 
     // One client sends a request to a server.
     @Test
@@ -154,22 +151,24 @@ public class Task4Tests {
         }
     }
 
-    @Test
-    public void testBFS() {
-        WikiMediator wm = new WikiMediator(5, 100);
-
-        wm.bfs("Philosophy", "Barack Obama");
-        Assertions.assertEquals(Arrays.asList("Philosophy", "Academic bias", "Barack Obama"), wm.getShortest());
-
-        wm.bfs("University of British Columbia", "Darfur crisis");
-        Assertions.assertEquals(Arrays.asList("University of British Columbia", "Justin Trudeau", "Darfur crisis"), wm.getShortest());
-
-        wm.bfs("Alea iacta est", "Malibu, California");
-        Assertions.assertEquals(Arrays.asList("Alea iacta est", "Caesar's Comet", "University of California, Los Angeles", "Malibu, California"), wm.getShortest());
-
-        wm.bfs("Jacques Cartier", "COVID-19");
-        Assertions.assertEquals(Arrays.asList("Jacques Cartier", "Canada", "COVID-19"), wm.getShortest());
-
+//    @Test
+//    public void testBFS() {
+//        WikiMediator wm = new WikiMediator(5, 100);
+//
+//        wm.bfs("Philosophy", "Barack Obama");
+//        Assertions.assertEquals(Arrays.asList("Philosophy", "Academic bias", "Barack Obama"), wm.getShortest());
+//
+//        wm.bfs("University of British Columbia", "Darfur crisis");
+//        Assertions.assertEquals(Arrays.asList("University of British Columbia", "Justin Trudeau", "Darfur crisis"), wm.getShortest());
+//
+//        wm.bfs("Alea iacta est", "Malibu, California");
+//        Assertions.assertEquals(Arrays.asList("Alea iacta est", "Caesar's Comet", "University of California, Los Angeles", "Malibu, California"), wm.getShortest());
+//
+//        wm.bfs("Jacques Cartier", "COVID-19");
+//        Assertions.assertEquals(Arrays.asList("Jacques Cartier", "Canada", "COVID-19"), wm.getShortest());
+//
+//        wm.bfs("String theory", "Apple sauce");
+//
 //        System.out.println(wm.getShortest());
-    }
+//    }
 }

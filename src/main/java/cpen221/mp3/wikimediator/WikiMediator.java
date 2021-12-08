@@ -16,8 +16,6 @@ public class WikiMediator {
     private List<Request> requestsTracker = Collections.synchronizedList(new ArrayList<>());
     private List<Long> allRequestsTracker = Collections.synchronizedList(new ArrayList<>());
 
-    private List<List<String>> path;
-
     /* Representation Invariant */
     // wikiBuffer, requestTracker, and allRequestTracker are not null
     // wikiBuffer and requestsTracker contain no null elements
@@ -217,6 +215,8 @@ public class WikiMediator {
      * @throws TimeoutException if no path is found
      */
     public List<String> shortestPath(String pageTitle1, String pageTitle2, int timeout) throws TimeoutException {
+        List<List<String>> path = new ArrayList<>();
+
         long currentTime = System.currentTimeMillis() / 1000;
         allRequestsTracker.add(currentTime);
 
@@ -224,7 +224,7 @@ public class WikiMediator {
             return List.of(pageTitle1);
         }
 
-        BFS search = new BFS(this, pageTitle1, pageTitle2);
+        BFS search = new BFS(wiki, path, pageTitle1, pageTitle2);
         Thread t = new Thread(search);
         Timer timer = new Timer();
         timer.schedule(new Timeout(t, timer), timeout * 1000L);
@@ -239,16 +239,70 @@ public class WikiMediator {
         return path.get(0);
     }
 
-    //TODO: make method private before submitting
+    public void saveState() {
+        try {
+            File stateFile = new File("local/state.txt");
+            if (stateFile.createNewFile()) {
+                Gson gson = new GsonBuilder().create();
+                FileWriter writer = new FileWriter(stateFile);
+                writer.write(gson.toJson(new WikiMediatorState(this)));
+                writer.close();
+            } else {
+                // File already exists
+            }
+        } catch (IOException ioe) {
+            System.out.println("IOException in creating state");
+        }
+    }
+
+    public void loadState() {
+        try {
+            File stateFile = new File("local/state.txt");
+            Scanner scanner = new Scanner(stateFile);
+            while (scanner.hasNextLine()) {
+                Gson gson = new GsonBuilder().create();
+                String line = scanner.nextLine();
+                WikiMediatorState state = gson.fromJson(line, WikiMediatorState.class);
+                wikiBuffer = new FSFTBuffer<>();
+                wikiBuffer.loadState(state);
+                requestsTracker = state.requestsTracker;
+                allRequestsTracker = state.allRequestsTracker;
+            }
+            System.out.println("Load state found!");
+        } catch (FileNotFoundException fnfe) {
+            System.out.println("Load state not found, starting fresh.");
+        }
+    }
+
+    /**
+     * Below is a collection of observer methods that allow the construction of WikiMediatorState,
+     * and a method that uses a WikiMediatorState to load a state.
+     */
+    public FSFTBuffer<WikiPage> getFSFTBuffer() { return wikiBuffer; }
+    public List<Request> getRequestsTracker() { return requestsTracker; }
+    public List<Long> getAllRequestTracker() { return allRequestsTracker; }
+}
+
+class BFS implements Runnable {
+    private final String start;
+    private final String target;
+    private final Wiki wiki;
+    private final List<List<String>> path;
+
+    public BFS(Wiki wiki, List<List<String>> path, String start, String target) {
+        this.start = start;
+        this.target = target;
+        this.wiki = wiki;
+        this.path = path;
+    }
+
     /**
      * Find all paths between two Wikipedia pages using BFS
      *
      * @param start the starting page
      * @param target the target page
      */
-    public void bfs(String start, String target) {
-        path = new ArrayList<>();
-
+    private void bfs(String start, String target) {
         List<String> children = wiki.getLinksOnPage(true, start);
         Collections.sort(children);
 
@@ -321,69 +375,9 @@ public class WikiMediator {
         }
     }
 
-    public void saveState() {
-        try {
-            File stateFile = new File("local/state.txt");
-            if (stateFile.createNewFile()) {
-                Gson gson = new GsonBuilder().create();
-                FileWriter writer = new FileWriter(stateFile);
-                writer.write(gson.toJson(new WikiMediatorState(this)));
-                writer.close();
-            } else {
-                // File already exists
-            }
-        } catch (IOException ioe) {
-            System.out.println("IOException in creating state");
-        }
-    }
-
-    public void loadState() {
-        try {
-            File stateFile = new File("local/state.txt");
-            Scanner scanner = new Scanner(stateFile);
-            while (scanner.hasNextLine()) {
-                Gson gson = new GsonBuilder().create();
-                String line = scanner.nextLine();
-                WikiMediatorState state = gson.fromJson(line, WikiMediatorState.class);
-                wikiBuffer = new FSFTBuffer<>();
-                wikiBuffer.loadState(state);
-                requestsTracker = state.requestsTracker;
-                allRequestsTracker = state.allRequestsTracker;
-            }
-            System.out.println("Load state found!");
-        } catch (FileNotFoundException fnfe) {
-            System.out.println("Load state not found, starting fresh.");
-        }
-    }
-
-    // TODO: remove before submitting
-    public List<String> getShortest() {
-        return new ArrayList<>(path.get(0));
-    }
-
-    /**
-     * Below is a collection of observer methods that allow the construction of WikiMediatorState,
-     * and a method that uses a WikiMediatorState to load a state.
-     */
-    public FSFTBuffer getFSFTBuffer() { return wikiBuffer; }
-    public List getRequestsTracker() { return requestsTracker; }
-    public List getAllRequestTracker() { return allRequestsTracker; }
-}
-
-class BFS implements Runnable {
-    private final String start;
-    private final String target;
-    private final WikiMediator wm;
-
-    public BFS(WikiMediator wm, String start, String target) {
-        this.start = start;
-        this.target = target;
-        this.wm = wm;
-    }
-
     @Override
     public void run() {
-        wm.bfs(start, target);
+        bfs(start, target);
     }
 }
 

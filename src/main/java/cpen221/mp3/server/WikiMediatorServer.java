@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpen221.mp3.wikimediator.WikiMediator;
 
-import java.util.*;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -13,9 +12,8 @@ import java.net.Socket;
 
 public class WikiMediatorServer {
 
-    private ServerSocket serverSocket;
+    private final ServerSocket serverSocket;
     private final WikiMediator wikiMediator;
-    private final int port;
 
     private boolean active;
     private int numClients = 0;
@@ -32,7 +30,6 @@ public class WikiMediatorServer {
     public WikiMediatorServer(int port, int n, WikiMediator wikiMediator) throws IOException {
         this.wikiMediator = wikiMediator;
         this.maxClients = n;
-        this.port = port;
         serverSocket = new ServerSocket(port);
         System.out.println("Starting...");
     }

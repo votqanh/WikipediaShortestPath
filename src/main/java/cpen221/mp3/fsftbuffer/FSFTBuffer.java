@@ -234,8 +234,8 @@ public class FSFTBuffer<T extends Bufferable> {
     public int getCapacity() { return capacity; }
     public int getTimeout() { return timeout; }
     public int getCurrentCapacity() { return currentCapacity; }
-    public Map getBuffer() { return new HashMap(buffer); }
-    public List getBufferIds() { return new ArrayList(bufferIds); }
+    public Map<Long, LinkedHashMap<Long, T>> getBuffer() { return new HashMap<>(buffer); }
+    public List<String> getBufferIds() { return new ArrayList<>(bufferIds); }
 
     public void loadState(WikiMediatorState state) {
         this.capacity = state.capacity;

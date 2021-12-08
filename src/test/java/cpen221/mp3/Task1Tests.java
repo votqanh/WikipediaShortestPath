@@ -5,7 +5,6 @@ import cpen221.mp3.fsftbuffer.FSFTBuffer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
 class T implements Bufferable {
