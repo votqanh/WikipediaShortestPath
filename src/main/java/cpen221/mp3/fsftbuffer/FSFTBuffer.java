@@ -50,7 +50,7 @@ public class FSFTBuffer<T extends Bufferable> {
     }
 
     /**
-     * Create a buffer with default capacity and timeout values.
+     * Create a buffer with default capacity (32) and timeout (3600 s) values.
      */
     public FSFTBuffer() {
         this(DSIZE, DTIMEOUT);
@@ -67,15 +67,15 @@ public class FSFTBuffer<T extends Bufferable> {
      *          already in the buffer
      */
     public synchronized boolean put(T t) {
-        // signal to get() that t exists and get() should wait until it's been added
         if (bufferIds.contains(t.id()))
             return false;
 
+        // signal to get() that t exists and get() should wait until it's been added
         bufferIds.add(t.id());
 
         long currentTime = System.currentTimeMillis();
 
-        removeStale();
+        removeStale(currentTime);
 
         // remove least recently accessed
         if (currentCapacity >= capacity) {
@@ -125,17 +125,16 @@ public class FSFTBuffer<T extends Bufferable> {
         }
     }
 
-    private void removeStale() {
+    private void removeStale(long currentTime) {
         Set<Long> times = new HashSet<>(buffer.keySet());
+
         for (long time : times) {
-            if (time >= time + timeout * 1000L) {
+            if (currentTime >= time + timeout * 1000L) {
                 LinkedHashMap<Long, T> time_object_map = buffer.get(time);
                 buffer.remove(time);
                 bufferIds.removeAll(time_object_map.keySet().stream().map(x -> time_object_map.get(x).id())
                         .collect(Collectors.toList()));
                 currentCapacity -= time_object_map.size();
-            } else {
-                break;
             }
         }
     }
@@ -149,7 +148,7 @@ public class FSFTBuffer<T extends Bufferable> {
     public synchronized T get(String id) throws NoSuchElementException {
         long currentTime = System.currentTimeMillis();
 
-        removeStale();
+        removeStale(currentTime);
 
         // if object is in the cache, wait until it's been properly added
         if (bufferIds.contains(id)) {
@@ -188,7 +187,11 @@ public class FSFTBuffer<T extends Bufferable> {
     public boolean touch(String id) {
         long currentTime = System.currentTimeMillis();
 
-        removeStale();
+        removeStale(currentTime);
+
+        if (!bufferIds.contains(id)) {
+            return false;
+        }
 
         for (long time : buffer.keySet()) {
             LinkedHashMap<Long, T> time_object_map = buffer.get(time);
