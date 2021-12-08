@@ -19,6 +19,23 @@ public class WikiMediatorServer {
     private int numClients = 0;
     private final int maxClients;
 
+    /* Representation Invariant */
+    // serverSocket, wikiMediator are not null
+    // 0 <= numClients <= maxClients
+
+    /* Abstraction Function */
+    // WikiMediatorServer acts as a network server that wraps a WikiMediator instance. It accepts WikiMediator method
+    // calls from clients and responds with the method return values. It is able to halt at a client's request and save
+    // its state from one startup to the next. It cannot handle more clients than maxClients.
+
+    /** A method for checking the RI of this class. **/
+    public void checkRep() {
+        assert !serverSocket.equals(null);
+        assert !wikiMediator.equals(null);
+        assert numClients >= 0;
+        assert numClients <= maxClients;
+    }
+
     /**
      * Start a server at a given port number, with the ability to process
      * up to n requests concurrently.
@@ -62,17 +79,6 @@ public class WikiMediatorServer {
             } catch (IOException ioe) {
                 throw new RuntimeException();
             }
-//            Thread handler = new Thread(() -> {
-//                try {
-//                    try (Socket socket = serverSocket.accept()) {
-//                        handle(socket, changeNumClients(1));
-//                    }
-//                } catch (IOException ioe) {
-//                    throw new RuntimeException();
-//                }
-//            });
-//
-//            handler.start();
         }
 
         try {
@@ -181,7 +187,7 @@ public class WikiMediatorServer {
         }
     }
 
-    // Used to run threads that detect when operations time out (needed in order to pass parameters)
+    // Used to run detectTimeout() threads (needed in order to pass parameters)
     public class MyRunnable implements Runnable {
         private final Thread thread;
         private final Socket socket;
@@ -201,6 +207,17 @@ public class WikiMediatorServer {
             detectTimeout(thread, socket, in, out, id, timeout);
         }
     }
+
+    /**
+     * A method used in separate threads that detect when the time for a thread to execute has passed.
+     *
+     * @param mainThread the thread to interrupt once time is up
+     * @param socket the socket to close once time is up
+     * @param in the BufferedReader to close once time is up
+     * @param out the PrintWriter to close once time is up
+     * @param id the id of the client request
+     * @param timeout the time allowed for the main thread
+     */
 
     private void detectTimeout(Thread mainThread, Socket socket, BufferedReader in, PrintWriter out, String id, long timeout) {
         try {

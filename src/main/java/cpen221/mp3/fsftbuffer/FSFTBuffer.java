@@ -230,7 +230,7 @@ public class FSFTBuffer<T extends Bufferable> {
     }
 
     /**
-     * Below is a collection of observer methods that allow the creation of FSFTState object,
+     * Below is a collection of observer methods that allow the creation of a WikiMediatorState object,
      * and a mutator method that loads the state of a past Buffer for use in servers.
      */
     public int getCapacity() { return capacity; }

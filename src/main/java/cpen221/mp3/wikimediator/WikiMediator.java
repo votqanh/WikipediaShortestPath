@@ -239,6 +239,10 @@ public class WikiMediator {
         return path.get(0);
     }
 
+    /**
+     * Save the state of the WikiMediator as a file stored in /local/.
+     */
+
     public void saveState() {
         try {
             File stateFile = new File("local/state.txt");
@@ -254,6 +258,11 @@ public class WikiMediator {
             System.out.println("IOException in creating state");
         }
     }
+
+    /**
+     * Load an old state of a WikiMediator from a file stored in /local/, and copy its values into this instance's
+     * fields.
+     */
 
     public void loadState() {
         try {
@@ -275,8 +284,7 @@ public class WikiMediator {
     }
 
     /**
-     * Below is a collection of observer methods that allow the construction of WikiMediatorState,
-     * and a method that uses a WikiMediatorState to load a state.
+     * Below is a collection of observer methods that allow the construction of WikiMediatorState.
      */
     public FSFTBuffer<WikiPage> getFSFTBuffer() { return wikiBuffer; }
     public List<Request> getRequestsTracker() { return requestsTracker; }
