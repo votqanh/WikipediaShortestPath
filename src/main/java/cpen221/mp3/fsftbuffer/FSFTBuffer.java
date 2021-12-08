@@ -161,7 +161,8 @@ public class FSFTBuffer<T extends Bufferable> {
 
         // if object is in the cache, wait until it's been properly added
         if (bufferIds.contains(id)) {
-            while (!buffer.keySet().stream().map(x -> buffer.get(x).entrySet()).flatMap(Collection::stream)
+            while (buffer.keySet().stream().anyMatch(x -> buffer.get(x) == null) ||
+                    !buffer.keySet().stream().map(x -> buffer.get(x).entrySet()).flatMap(Collection::stream)
                     .map(e -> e.getValue().id()).collect(Collectors.toList()).contains(id));
 
             for (long time : buffer.keySet()) {
