@@ -89,7 +89,6 @@ public class WikiMediator {
         }
         trackRequest(pageTitle, currentTime);
         allRequestsTracker.add(currentTime);
-        System.out.println(requestsTracker);
         return text;
     }
 
@@ -239,6 +238,10 @@ public class WikiMediator {
         return path.get(0);
     }
 
+    /**
+     * Save the state of the WikiMediator as a file stored in /local/.
+     */
+
     public void saveState() {
         try {
             File stateFile = new File("local/state.txt");
@@ -255,6 +258,11 @@ public class WikiMediator {
         }
     }
 
+    /**
+     * Load an old state of a WikiMediator from a file stored in /local/, and copy its values into this instance's
+     * fields.
+     */
+
     public void loadState() {
         try {
             File stateFile = new File("local/state.txt");
@@ -268,15 +276,13 @@ public class WikiMediator {
                 requestsTracker = state.requestsTracker;
                 allRequestsTracker = state.allRequestsTracker;
             }
-            System.out.println("Load state found!");
         } catch (FileNotFoundException fnfe) {
-            System.out.println("Load state not found, starting fresh.");
+            // File doesn't exist (this is fine)
         }
     }
 
     /**
-     * Below is a collection of observer methods that allow the construction of WikiMediatorState,
-     * and a method that uses a WikiMediatorState to load a state.
+     * Below is a collection of observer methods that allow the construction of WikiMediatorState.
      */
     public FSFTBuffer<WikiPage> getFSFTBuffer() { return wikiBuffer; }
     public List<Request> getRequestsTracker() { return requestsTracker; }

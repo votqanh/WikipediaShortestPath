@@ -20,6 +20,13 @@ public class ClientRequest {
 
     public int timeout;
 
+    /* Representation Invariant */
+    // type is either the name of a WikiMediator method or "stop"
+
+    /* Abstraction Function */
+    // A class used to encapsulate a client request to WikiMediatorServer. Only the appropriate parameter fields
+    // are given values upon instantiation.
+
     public ClientRequest(String id, String query, int limit, int timeout) {
         type = "search";
         this.id = id;

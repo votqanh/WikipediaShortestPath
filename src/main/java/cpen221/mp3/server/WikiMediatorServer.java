@@ -19,6 +19,23 @@ public class WikiMediatorServer {
     private int numClients = 0;
     private final int maxClients;
 
+    /* Representation Invariant */
+    // serverSocket, wikiMediator are not null
+    // 0 <= numClients <= maxClients
+
+    /* Abstraction Function */
+    // WikiMediatorServer acts as a network server that wraps a WikiMediator instance. It accepts WikiMediator method
+    // calls from clients and responds with the method return values. It is able to halt at a client's request and save
+    // its state from one startup to the next. It cannot handle more clients than maxClients.
+
+    /** A method for checking the RI of this class. **/
+    public void checkRep() {
+        assert !serverSocket.equals(null);
+        assert !wikiMediator.equals(null);
+        assert numClients >= 0;
+        assert numClients <= maxClients;
+    }
+
     /**
      * Start a server at a given port number, with the ability to process
      * up to n requests concurrently.
@@ -31,7 +48,6 @@ public class WikiMediatorServer {
         this.wikiMediator = wikiMediator;
         this.maxClients = n;
         serverSocket = new ServerSocket(port);
-        System.out.println("Starting...");
     }
 
     /**
@@ -42,15 +58,12 @@ public class WikiMediatorServer {
     public void serve() {
 
         wikiMediator.loadState();
-        System.out.println("Starting to serve.");
 
         active = true;
         while (active) {
 
-            System.out.println("Looking for a new client");
             try {
                 Socket socket = serverSocket.accept();
-                System.out.println("Client found.");
                 Thread handler = new Thread(() -> {
                     try {
                         handle(socket, changeNumClients(1));
@@ -62,22 +75,10 @@ public class WikiMediatorServer {
             } catch (IOException ioe) {
                 throw new RuntimeException();
             }
-//            Thread handler = new Thread(() -> {
-//                try {
-//                    try (Socket socket = serverSocket.accept()) {
-//                        handle(socket, changeNumClients(1));
-//                    }
-//                } catch (IOException ioe) {
-//                    throw new RuntimeException();
-//                }
-//            });
-//
-//            handler.start();
         }
 
         try {
             serverSocket.close();
-            System.out.println("Server closed");
         } catch (IOException ioe) {
             System.out.println("IOException in closing server");
         }
@@ -102,8 +103,6 @@ public class WikiMediatorServer {
         Response response = new Response();
         response.id = request.id;
         response.status = overflow ? "failed" : "success";
-
-        System.out.println("Handling request from id " + request.id);
 
         if (!request.type.equals("stop")) {
             Thread timeoutThread = new Thread(new MyRunnable(Thread.currentThread(), socket, in, out, response.id, request.timeout));
@@ -157,15 +156,16 @@ public class WikiMediatorServer {
                         out.close();
                         socket.close();
                         serverSocket.close();
-                        Thread.currentThread().interrupt();
                 }
             }
 
-            changeNumClients(-1);
-            out.println(gson.toJson(response));
-            in.close();
-            out.close();
-            socket.close();
+            if (!request.type.equals("stop")) {
+                changeNumClients(-1);
+                out.println(gson.toJson(response));
+                in.close();
+                out.close();
+                socket.close();
+            }
 
         } catch (NoSuchMethodException nsme) {
             System.out.println("Invalid method requested: " + request.type);
@@ -181,7 +181,7 @@ public class WikiMediatorServer {
         }
     }
 
-    // Used to run threads that detect when operations time out (needed in order to pass parameters)
+    // Used to run detectTimeout() threads (needed in order to pass parameters)
     public class MyRunnable implements Runnable {
         private final Thread thread;
         private final Socket socket;
@@ -201,6 +201,17 @@ public class WikiMediatorServer {
             detectTimeout(thread, socket, in, out, id, timeout);
         }
     }
+
+    /**
+     * A method used in separate threads that detect when the time for a thread to execute has passed.
+     *
+     * @param mainThread the thread to interrupt once time is up
+     * @param socket the socket to close once time is up
+     * @param in the BufferedReader to close once time is up
+     * @param out the PrintWriter to close once time is up
+     * @param id the id of the client request
+     * @param timeout the time allowed for the main thread
+     */
 
     private void detectTimeout(Thread mainThread, Socket socket, BufferedReader in, PrintWriter out, String id, long timeout) {
         try {
@@ -236,7 +247,6 @@ public class WikiMediatorServer {
     private synchronized boolean changeNumClients(int amount) {
         numClients += amount;
         boolean overflow = numClients > maxClients;
-        System.out.println("Number of clients has " + ((amount > 0) ? "increased" : "decreased") + " to " + numClients + ". Overflow: " + overflow);
         return overflow;
     }
 }

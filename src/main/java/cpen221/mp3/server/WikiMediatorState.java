@@ -16,6 +16,13 @@ public class WikiMediatorState {
     public List<Request> requestsTracker;
     public List<Long> allRequestsTracker;
 
+    /* Representation Invariant */
+    // currentCapacity <= capacity
+    // buffer, bufferIds are not null
+
+    /* Abstraction Function */
+    // A class used to encapsulate the state of a WikiMediatorServer at some point in time.
+
     public WikiMediatorState(WikiMediator wm) {
         capacity = wm.getFSFTBuffer().getCapacity();
         timeout = wm.getFSFTBuffer().getTimeout();

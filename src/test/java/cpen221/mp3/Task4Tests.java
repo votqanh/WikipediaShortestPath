@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 public class Task4Tests {
 
@@ -15,6 +16,7 @@ public class Task4Tests {
     private static final int PORT = 9997;
 
     // One client sends a request to a server.
+    // The order of a search result is not predictable.
     @Test
     public void singleRequest() {
         try {
@@ -38,7 +40,7 @@ public class Task4Tests {
             serverThread.start();
 
             WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new ClientRequest("one", "Barack Obama", 500, 1));
-            System.out.println(client.sendRequest());
+            assert Objects.equals(client.sendRequest(), "{\"id\":\"one\",\"status\":\"failed\",\"response\":\"Operation timed out\"}");
         } catch (IOException ioe) {
             System.out.println("IOException");
         }
@@ -47,7 +49,9 @@ public class Task4Tests {
     // Three clients send three requests to the server, with maxClients being 1.
     // Clients 1 and 2 have unreasonable time needs, so they will time out.
     // Clients 1 and 2 send their requests at the same time. One will run and then time out, the other will instantly fail.
+    // Which of Client 1 or 2 will fail is not predictable.
     // Client 3 sends its request after Clients 1 and 2 finish, so Client 3's request will succeed.
+    // The order of Client 3's search result is not predictable.
     @Test
     public void tripleRequest() {
         try {
@@ -95,7 +99,7 @@ public class Task4Tests {
             serverThread.start();
 
             WikiMediatorClient client = new WikiMediatorClient(IP, PORT, new ClientRequest("1", "Philosophy", "Barack Obama", 30));
-            System.out.println(client.sendRequest());
+            assert Objects.equals(client.sendRequest(), "{\"id\":\"1\",\"status\":\"success\",\"response\":[\"Philosophy\",\"Academic bias\",\"Barack Obama\"]}");
         } catch (IOException ioe) {
             System.out.println("IOException");
         }
@@ -120,34 +124,34 @@ public class Task4Tests {
             serverThread.start();
 
             WikiMediatorClient c1 = new WikiMediatorClient(IP, PORT, new ClientRequest("1", "Trampoline", 5, 100));
-            System.out.println(c1.sendRequest());
+            c1.sendRequest();
 
             WikiMediatorClient c2 = new WikiMediatorClient(IP, PORT, new ClientRequest("2", "Trampolining", 5, 100));
-            System.out.println(c2.sendRequest());
+            c2.sendRequest();
 
             WikiMediatorClient c3 = new WikiMediatorClient(IP, PORT, new ClientRequest("3", "Trampolining", 5, 100));
-            System.out.println(c3.sendRequest());
+            c3.sendRequest();
 
             WikiMediatorClient c4 = new WikiMediatorClient(IP, PORT, new ClientRequest("4", "Trampolining", 5, 100));
-            System.out.println(c4.sendRequest());
+            c4.sendRequest();
 
             WikiMediatorClient c5 = new WikiMediatorClient(IP, PORT, new ClientRequest("5", "Springfree Trampoline", 5, 100));
-            System.out.println(c5.sendRequest());
+            c5.sendRequest();
 
             WikiMediatorClient c6 = new WikiMediatorClient(IP, PORT, new ClientRequest("6", "Springfree Trampoline", 5, 100));
-            System.out.println(c6.sendRequest());
+            c6.sendRequest();
 
             WikiMediatorClient c7 = new WikiMediatorClient(IP, PORT, new ClientRequest("7", "stop"));
-            System.out.println(c7.sendRequest());
+            assert Objects.equals(c7.sendRequest(), "{\"id\":\"7\",\"response\":\"bye\"}");
 
             WikiMediatorServer server2 = new WikiMediatorServer(PORT, 1, new WikiMediator(0, 0));
             Thread serverThread2 = new Thread(server2::serve);
             serverThread2.start();
 
             WikiMediatorClient c8 = new WikiMediatorClient(IP, PORT, new ClientRequest("8", 4, true, 100));
-            System.out.println(c8.sendRequest());
+            assert Objects.equals(c8.sendRequest(), "{\"id\":\"8\",\"status\":\"success\",\"response\":[\"Trampolining\",\"Springfree Trampoline\",\"Trampoline\"]}");
         } catch (IOException ioe) {
-            System.out.println("IOException in test");
+            System.out.println("IOException");
         }
     }
 
